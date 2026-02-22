@@ -797,8 +797,8 @@ export default function DartsApp() {
     }
   }, [selectedPlayer, currentChallenge])
 
-  const handleAddPlayer = async (e: React.FormEvent) => {
-    e.preventDefault()
+  const handleAddPlayer = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault()
     
     console.log('handleAddPlayer called', { name: newPlayerName, initials: newPlayerInitials })
     
@@ -2023,8 +2023,8 @@ export default function DartsApp() {
                   </Badge>
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <form onSubmit={handleAddPlayer} className="space-y-4">
+              <CardContent>
+                <div className="space-y-4">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <div>
                       <Label htmlFor="addPlayerName">Naam *</Label>
@@ -2033,8 +2033,12 @@ export default function DartsApp() {
                         value={newPlayerName}
                         onChange={(e) => setNewPlayerName(e.target.value)}
                         placeholder="Bijv. Jan de Vries"
-                        required
                         disabled={isSubmitting}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' && newPlayerName.trim()) {
+                            handleAddPlayer()
+                          }
+                        }}
                       />
                     </div>
                     <div>
@@ -2046,17 +2050,22 @@ export default function DartsApp() {
                         placeholder="JD"
                         maxLength={3}
                         disabled={isSubmitting}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' && newPlayerName.trim()) {
+                            handleAddPlayer()
+                          }
+                        }}
                       />
                     </div>
                   </div>
                   <Button 
-                    type="submit"
+                    onClick={handleAddPlayer}
                     disabled={isSubmitting || !newPlayerName.trim()}
                     className="w-full bg-[#4a5568] hover:bg-[#2d3748] text-white"
                   >
                     {isSubmitting ? 'Toevoegen...' : 'Nieuwe Speler Toevoegen'}
                   </Button>
-                </form>
+                </div>
               </CardContent>
             </Card>
 
@@ -2357,7 +2366,7 @@ export default function DartsApp() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <form onSubmit={handleAddPlayer} className="space-y-4">
+              <div className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <Label htmlFor="addPlayerNameHeader" className="text-[#4a5568]">Naam *</Label>
@@ -2366,9 +2375,13 @@ export default function DartsApp() {
                       value={newPlayerName}
                       onChange={(e) => setNewPlayerName(e.target.value)}
                       placeholder="Bijv. Jan de Vries"
-                      required
                       disabled={isSubmitting}
                       className="bg-white border-gray-300 text-[#2d3748] placeholder:text-gray-400 mt-1.5"
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && newPlayerName.trim()) {
+                          handleAddPlayer()
+                        }
+                      }}
                     />
                   </div>
                   <div>
@@ -2381,18 +2394,28 @@ export default function DartsApp() {
                       maxLength={3}
                       disabled={isSubmitting}
                       className="bg-white border-gray-300 text-[#2a5568] placeholder:text-gray-400 text-center mt-1.5"
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && newPlayerName.trim()) {
+                          handleAddPlayer()
+                        }
+                      }}
                     />
                   </div>
                 </div>
                 <div className="flex gap-3 justify-end">
-                  <Button type="submit" className="bg-[#4a5568] hover:bg-[#2d3748] text-white" disabled={isSubmitting || !newPlayerName.trim()}>
+                  <Button 
+                    type="button"
+                    onClick={handleAddPlayer}
+                    className="bg-[#4a5568] hover:bg-[#2d3748] text-white" 
+                    disabled={isSubmitting || !newPlayerName.trim()}
+                  >
                     {isSubmitting ? 'Toevoegen...' : 'Toevoegen'}
                   </Button>
                   <Button type="button" variant="outline" onClick={() => setShowAddPlayer(false)} className="border-gray-300 text-[#4a5568] hover:bg-gray-50" disabled={isSubmitting}>
                     Annuleren
                   </Button>
                 </div>
-              </form>
+              </div>
             </CardContent>
           </Card>
         </div>
