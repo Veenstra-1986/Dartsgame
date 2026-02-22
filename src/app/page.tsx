@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Trophy, Target, Calendar, Crosshair, User, Plus, Zap, Award, Flame, Anchor, BookOpen, Shield, Clock, Gamepad2, Sword, Users, Swords, Calculator, CheckCircle, Minus, RefreshCw, HelpCircle, List, Undo2, TrendingUp, Play } from 'lucide-react'
+import { Trophy, Target, Calendar, Crosshair, User, Plus, Zap, Award, Flame, Anchor, BookOpen, Shield, Clock, Gamepad2, Sword, Users, Swords, Calculator, CheckCircle, Minus, RefreshCw, HelpCircle, List, Undo2, TrendingUp, Play, Upload, X } from 'lucide-react'
 import brandConfig from '@/config/brand-config'
 
 interface Player {
@@ -702,6 +702,19 @@ export default function DartsApp() {
   const [selectedChallenge, setSelectedChallengeDetail] = useState<typeof CHALLENGE_TYPES[0] | null>(null)
   const [selectedTrainingGame, setSelectedTrainingGame] = useState<typeof TRAINING_GAMES[0] | null>(null)
 
+  // Logo state
+  const [customLogoUrl, setCustomLogoUrl] = useState<string>('')
+  const [showLogoUpload, setShowLogoUpload] = useState(false)
+  const [isUploadingLogo, setIsUploadingLogo] = useState(false)
+
+  // Load custom logo from localStorage on mount
+  useEffect(() => {
+    const savedLogo = localStorage.getItem('customLogoUrl')
+    if (savedLogo) {
+      setCustomLogoUrl(savedLogo)
+    }
+  }, [])
+
   const fetchData = async () => {
     try {
       const playersRes = await fetch('/api/players')
@@ -910,6 +923,44 @@ export default function DartsApp() {
     // TODO: Save to API
     alert(`Game opgeslagen! Score: ${currentScore} in ${dartsThrown} darts`)
     resetGame()
+  }
+
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    setIsUploadingLogo(true)
+    try {
+      const formData = new FormData()
+      formData.append('logo', file)
+
+      const res = await fetch('/api/logo/upload', {
+        method: 'POST',
+        body: formData
+      })
+
+      if (res.ok) {
+        const data = await res.json()
+        setCustomLogoUrl(data.logoUrl)
+        localStorage.setItem('customLogoUrl', data.logoUrl)
+        alert('Logo succesvol geüpload!')
+      } else {
+        const error = await res.json()
+        alert('Logo upload mislukt: ' + error.error)
+      }
+    } catch (error) {
+      console.error('Logo upload error:', error)
+      alert('Logo upload mislukt')
+    } finally {
+      setIsUploadingLogo(false)
+      setShowLogoUpload(false)
+    }
+  }
+
+  const resetLogo = () => {
+    setCustomLogoUrl('')
+    localStorage.removeItem('customLogoUrl')
+    setShowLogoUpload(false)
   }
 
   const LeaderboardTable = ({ entries, title, icon: Icon }: { entries: LeaderboardEntry[], title: string, icon: any }) => {
@@ -1783,11 +1834,17 @@ export default function DartsApp() {
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between flex-wrap gap-4">
             <div className="flex items-center gap-3">
-              <img 
-                src={brandConfig.logo.path} 
-                alt={brandConfig.logo.alt} 
-                className="h-14 w-auto"
-              />
+              <div className="relative group">
+                <img 
+                  src={customLogoUrl || brandConfig.logo.path} 
+                  alt={brandConfig.logo.alt} 
+                  className="h-14 w-auto cursor-pointer hover:opacity-80 transition-opacity"
+                  onClick={() => setShowLogoUpload(true)}
+                />
+                <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/50 rounded cursor-pointer">
+                  <Upload className="h-5 w-5 text-white" />
+                </div>
+              </div>
               {brandConfig.logo.showText && (
                 <div className="hidden sm:block">
                   <p className="text-xs text-[#4a5568] flex items-center gap-1">
@@ -1869,6 +1926,66 @@ export default function DartsApp() {
                   Annuleren
                 </Button>
               </form>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {showLogoUpload && (
+        <div className="container mx-auto px-4 py-6">
+          <Card className="bg-white border-2 border-[#4a5568]/30 shadow-lg">
+            <CardHeader>
+              <CardTitle className="text-[#2d3748] flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Upload className="h-5 w-5 text-[#4a5568]" />
+                  Logo Upload
+                </div>
+                <Button variant="ghost" size="sm" onClick={() => setShowLogoUpload(false)}>
+                  <X className="h-4 w-4" />
+                </Button>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <Label htmlFor="logo">Upload Logo</Label>
+                <Input
+                  id="logo"
+                  type="file"
+                  accept="image/*,.svg"
+                  onChange={handleLogoUpload}
+                  className="mt-1.5"
+                />
+                <p className="text-xs text-[#4a5568] mt-2">
+                  Ondersteunde formaten: JPG, PNG, SVG, WebP. Maximum grootte: 2MB
+                </p>
+              </div>
+
+              {customLogoUrl && (
+                <div className="bg-[#f7fafc] p-4 rounded-lg border border-gray-200">
+                  <p className="text-sm font-medium text-[#2d3748] mb-2">Huidig Logo:</p>
+                  <div className="flex items-center justify-between gap-4">
+                    <img 
+                      src={customLogoUrl} 
+                      alt="Current logo" 
+                      className="h-16 w-auto border border-gray-300 rounded"
+                    />
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={resetLogo}
+                    >
+                      Reset naar Standaard
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {isUploadingLogo && (
+                <div className="bg-[#f7fafc] p-4 rounded-lg border border-gray-200 text-center">
+                  <RefreshCw className="h-6 w-6 text-[#4a5568] mx-auto animate-spin mb-2" />
+                  <p className="text-sm text-[#4a5568]">Logo uploaden...</p>
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>
