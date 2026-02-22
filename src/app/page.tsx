@@ -1032,31 +1032,27 @@ export default function DartsApp() {
     const file = e.target.files?.[0]
     if (!file) return
 
+    // Check file size (max 5MB)
+    const maxSize = 5 * 1024 * 1024
+    if (file.size > maxSize) {
+      alert('Bestand is te groot. Maximum is 5MB.')
+      return
+    }
+
     setIsUploadingLogo(true)
     try {
-      const formData = new FormData()
-      formData.append('logo', file)
-
-      const res = await fetch('/api/logo/upload', {
-        method: 'POST',
-        body: formData
-      })
-
-      if (res.ok) {
-        const data = await res.json()
-        setCustomLogoUrl(data.logoUrl)
-        localStorage.setItem('customLogoUrl', data.logoUrl)
-        alert('Logo succesvol geüpload!')
-      } else {
-        const error = await res.json()
-        alert('Logo upload mislukt: ' + error.error)
-      }
+      // Create object URL for preview
+      const previewUrl = URL.createObjectURL(file)
+      setCustomLogoUrl(previewUrl)
+      localStorage.setItem('customLogoUrl', previewUrl)
+      
+      alert('Logo succesvol bijgewerkt!')
+      setShowLogoUpload(false)
     } catch (error) {
       console.error('Logo upload error:', error)
       alert('Logo upload mislukt')
     } finally {
       setIsUploadingLogo(false)
-      setShowLogoUpload(false)
     }
   }
 
@@ -1943,10 +1939,60 @@ export default function DartsApp() {
           <div className="space-y-6">
             <div className="flex items-center gap-2 mb-4">
               <Users className="h-5 w-5 text-[#2d3748]" />
-              <h2 className="text-xl font-bold text-[#2d3748]">Speler Beheer</h2>
+              <h2 className="text-xl font-bold text-[#2d3748]">Beheer</h2>
             </div>
-            <p className="text-[#4a5568] mb-6">Beheer alle spelers, avatars en nicknames!</p>
+            <p className="text-[#4a5568] mb-6">Beheer logo, spelers, avatars en nicknames!</p>
 
+            {/* Logo Beheer */}
+            <Card className="bg-white border border-gray-200 shadow-sm">
+              <CardHeader>
+                <CardTitle className="text-[#2d3748] flex items-center gap-2">
+                  <Anchor className="h-5 w-5 text-[#4a5568]" />
+                  Logo Beheer
+                </CardTitle>
+                <CardDescription>
+                  Upload een eigen logo of reset naar standaard
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center gap-4">
+                  <img 
+                    src={customLogoUrl || brandConfig.logo.path}
+                    alt="Current logo"
+                    className="h-16 w-auto border border-gray-300 rounded-lg bg-white"
+                  />
+                  <div className="flex-1 space-y-2">
+                    <div>
+                      <Label htmlFor="logoUpload">Upload Nieuw Logo</Label>
+                      <Input
+                        id="logoUpload"
+                        type="file"
+                        accept="image/*"
+                        onChange={handleLogoUpload}
+                        disabled={isUploadingLogo}
+                        className="mt-1.5"
+                      />
+                      <p className="text-xs text-[#4a5568] mt-1">
+                        PNG, JPG, SVG, WebP • Max 5MB
+                      </p>
+                    </div>
+                    {customLogoUrl && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={resetLogo}
+                        className="text-red-600 hover:text-red-700 border-red-300"
+                      >
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        Reset naar Standaard Logo
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Speler Beheer */}
             <Card className="bg-white border border-gray-200 shadow-sm">
               <CardHeader>
                 <CardTitle className="text-[#2d3748] flex items-center justify-between">
@@ -2201,11 +2247,14 @@ export default function DartsApp() {
                 <img 
                   src={customLogoUrl || brandConfig.logo.path} 
                   alt={brandConfig.logo.alt} 
-                  className="h-14 w-auto cursor-pointer hover:opacity-80 transition-opacity"
-                  onClick={() => setShowLogoUpload(true)}
+                  className="h-14 w-auto cursor-pointer hover:opacity-80 transition-opacity rounded-lg"
+                  onClick={() => {
+                    setActiveTab('management')
+                    setShowLogoUpload(false)
+                  }}
                 />
-                <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/50 rounded cursor-pointer">
-                  <Upload className="h-5 w-5 text-white" />
+                <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/50 rounded-lg cursor-pointer">
+                  <Edit2 className="h-5 w-5 text-white" />
                 </div>
               </div>
               {brandConfig.logo.showText && (
@@ -2303,66 +2352,6 @@ export default function DartsApp() {
                   Annuleren
                 </Button>
               </form>
-            </CardContent>
-          </Card>
-        </div>
-      )}
-
-      {showLogoUpload && (
-        <div className="container mx-auto px-4 py-6">
-          <Card className="bg-white border-2 border-[#4a5568]/30 shadow-lg">
-            <CardHeader>
-              <CardTitle className="text-[#2d3748] flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Upload className="h-5 w-5 text-[#4a5568]" />
-                  Logo Upload
-                </div>
-                <Button variant="ghost" size="sm" onClick={() => setShowLogoUpload(false)}>
-                  <X className="h-4 w-4" />
-                </Button>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <Label htmlFor="logo">Upload Logo</Label>
-                <Input
-                  id="logo"
-                  type="file"
-                  accept="image/*,.svg"
-                  onChange={handleLogoUpload}
-                  className="mt-1.5"
-                />
-                <p className="text-xs text-[#4a5568] mt-2">
-                  Ondersteunde formaten: JPG, PNG, SVG, WebP. Maximum grootte: 2MB
-                </p>
-              </div>
-
-              {customLogoUrl && (
-                <div className="bg-[#f7fafc] p-4 rounded-lg border border-gray-200">
-                  <p className="text-sm font-medium text-[#2d3748] mb-2">Huidig Logo:</p>
-                  <div className="flex items-center justify-between gap-4">
-                    <img 
-                      src={customLogoUrl} 
-                      alt="Current logo" 
-                      className="h-16 w-auto border border-gray-300 rounded"
-                    />
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={resetLogo}
-                    >
-                      Reset naar Standaard
-                    </Button>
-                  </div>
-                </div>
-              )}
-
-              {isUploadingLogo && (
-                <div className="bg-[#f7fafc] p-4 rounded-lg border border-gray-200 text-center">
-                  <RefreshCw className="h-6 w-6 text-[#4a5568] mx-auto animate-spin mb-2" />
-                  <p className="text-sm text-[#4a5568]">Logo uploaden...</p>
-                </div>
-              )}
             </CardContent>
           </Card>
         </div>
