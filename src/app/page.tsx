@@ -10,13 +10,15 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Trophy, Target, Calendar, Crosshair, User, Plus, Zap, Award, Flame, Anchor, BookOpen, Shield, Clock, Gamepad2, Sword, Users, Swords, Calculator, CheckCircle, Minus, RefreshCw, HelpCircle, List, Undo2, TrendingUp, Play, Upload, X } from 'lucide-react'
+import { Trophy, Target, Calendar, Crosshair, User, Plus, Zap, Award, Flame, Anchor, BookOpen, Shield, Clock, Gamepad2, Sword, Users, Swords, Calculator, CheckCircle, Minus, RefreshCw, HelpCircle, List, Undo2, TrendingUp, Play, Upload, X, Edit2, Trash2 } from 'lucide-react'
 import brandConfig from '@/config/brand-config'
 
 interface Player {
   id: string
   name: string
   email?: string
+  nickname?: string
+  avatar?: string
   initials?: string
 }
 
@@ -33,6 +35,8 @@ interface LeaderboardEntry {
   rank: number
   playerName: string
   initials: string
+  nickname?: string
+  avatar?: string
   score: number
   isCurrentUser: boolean
 }
@@ -707,6 +711,13 @@ export default function DartsApp() {
   const [showLogoUpload, setShowLogoUpload] = useState(false)
   const [isUploadingLogo, setIsUploadingLogo] = useState(false)
 
+  // Player management state
+  const [editingPlayer, setEditingPlayer] = useState<Player | null>(null)
+  const [isDeletingPlayer, setIsDeletingPlayer] = useState<string | null>(null)
+  const [showPlayerForm, setShowPlayerForm] = useState(false)
+  const [playerForm, setPlayerForm] = useState({ name: '', email: '', nickname: '', initials: '' })
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false)
+
   // Load custom logo from localStorage on mount
   useEffect(() => {
     const savedLogo = localStorage.getItem('customLogoUrl')
@@ -810,6 +821,98 @@ export default function DartsApp() {
       }
     } catch (error) {
       console.error('Error adding player:', error)
+    }
+  }
+
+  // Player management functions
+  const openPlayerEdit = (player: Player) => {
+    setEditingPlayer(player)
+    setPlayerForm({
+      name: player.name,
+      email: player.email || '',
+      nickname: player.nickname || '',
+      initials: player.initials || ''
+    })
+    setShowPlayerForm(true)
+  }
+
+  const handlePlayerFormSubmit = async () => {
+    if (!editingPlayer) return
+
+    try {
+      const res = await fetch('/api/players', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: editingPlayer.id,
+          ...playerForm
+        })
+      })
+
+      if (res.ok) {
+        const updatedPlayer = await res.json()
+        setPlayers(players.map(p => p.id === updatedPlayer.id ? updatedPlayer : p))
+        setShowPlayerForm(false)
+        setEditingPlayer(null)
+        fetchData()
+      }
+    } catch (error) {
+      console.error('Error updating player:', error)
+      alert('Speler bijwerken mislukt')
+    }
+  }
+
+  const handleDeletePlayer = async (playerId: string, playerName: string) => {
+    if (!confirm(`Weet je zeker dat je ${playerName} wilt verwijderen? Dit kan niet ongedaan worden!`)) {
+      return
+    }
+
+    try {
+      const res = await fetch(`/api/players?id=${playerId}`, {
+        method: 'DELETE'
+      })
+
+      if (res.ok) {
+        setPlayers(players.filter(p => p.id !== playerId))
+        if (selectedPlayer === playerId) {
+          setSelectedPlayer('')
+        }
+        fetchData()
+      }
+    } catch (error) {
+      console.error('Error deleting player:', error)
+      alert('Speler verwijderen mislukt')
+    }
+  }
+
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!editingPlayer) return
+
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    setIsUploadingAvatar(true)
+    try {
+      const formData = new FormData()
+      formData.append('avatar', file)
+      formData.append('playerId', editingPlayer.id)
+
+      const res = await fetch('/api/players/avatar/upload', {
+        method: 'POST',
+        body: formData
+      })
+
+      if (res.ok) {
+        const data = await res.json()
+        const updatedPlayer = { ...editingPlayer, avatar: data.avatarUrl }
+        setPlayers(players.map(p => p.id === updatedPlayer.id ? updatedPlayer : p))
+        setEditingPlayer(updatedPlayer)
+      }
+    } catch (error) {
+      console.error('Avatar upload error:', error)
+      alert('Avatar upload mislukt')
+    } finally {
+      setIsUploadingAvatar(false)
     }
   }
 
@@ -984,16 +1087,28 @@ export default function DartsApp() {
             >
               <div className="flex items-center justify-between p-3">
                 <div className="flex items-center gap-3">
-                  <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm ${
-                    entry.rank <= 3 
-                      ? 'bg-[#2d3748] text-white' 
-                      : 'bg-gray-100 text-[#4a5568]'
-                  }`}>
-                    {entry.rank <= 3 ? ['🥇', '🥈', '🥉'][entry.rank - 1] : entry.rank}
-                  </div>
+                  {entry.avatar ? (
+                    <img 
+                      src={entry.avatar}
+                      alt={entry.nickname || entry.playerName}
+                      className="w-10 h-10 rounded-full object-cover border-2 border-white shadow-sm"
+                    />
+                  ) : (
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm ${
+                      entry.rank <= 3 
+                        ? 'bg-[#2d3748] text-white' 
+                        : 'bg-gray-100 text-[#4a5568]'
+                    }`}>
+                      {entry.rank <= 3 ? ['🥇', '🥈', '🥉'][entry.rank - 1] : entry.rank}
+                    </div>
+                  )}
                   <div>
-                    <div className="font-semibold text-[#2d3748]">{entry.playerName}</div>
-                    <div className="text-xs text-[#4a5568] font-mono">{entry.initials}</div>
+                    <div className="font-semibold text-[#2d3748]">
+                      {entry.nickname || entry.playerName}
+                    </div>
+                    <div className="text-xs text-[#4a5568] font-mono">
+                      {entry.initials} {entry.nickname && `(${entry.nickname})`}
+                    </div>
                   </div>
                 </div>
                 <Badge 
@@ -1823,6 +1938,254 @@ export default function DartsApp() {
           </div>
         )
 
+      case 'management':
+        return (
+          <div className="space-y-6">
+            <div className="flex items-center gap-2 mb-4">
+              <Users className="h-5 w-5 text-[#2d3748]" />
+              <h2 className="text-xl font-bold text-[#2d3748]">Speler Beheer</h2>
+            </div>
+            <p className="text-[#4a5568] mb-6">Beheer alle spelers, avatars en nicknames!</p>
+
+            <Card className="bg-white border border-gray-200 shadow-sm">
+              <CardHeader>
+                <CardTitle className="text-[#2d3748] flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Plus className="h-5 w-5 text-[#4a5568]" />
+                    Speler Toevoegen
+                  </div>
+                  <Badge variant="secondary" className="bg-[#2d3748]/10 text-[#4a5568] border-[#4a5568]/20">
+                    {players.length} spelers
+                  </Badge>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div>
+                    <Label htmlFor="playerName">Naam *</Label>
+                    <Input
+                      id="playerName"
+                      value={newPlayerName}
+                      onChange={(e) => setNewPlayerName(e.target.value)}
+                      placeholder="Bijv. Jan de Vries"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="playerInitials">Initialen</Label>
+                    <Input
+                      id="playerInitials"
+                      value={newPlayerInitials}
+                      onChange={(e) => setNewPlayerInitials(e.target.value)}
+                      placeholder="JD"
+                      maxLength={3}
+                    />
+                  </div>
+                </div>
+                <Button 
+                  onClick={handleAddPlayer}
+                  className="w-full bg-[#4a5568] hover:bg-[#2d3748] text-white"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Nieuwe Speler
+                </Button>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-white border border-gray-200 shadow-sm">
+              <CardHeader>
+                <CardTitle className="text-[#2d3748] flex items-center gap-2">
+                  <Users className="h-5 w-5 text-[#2d3748]" />
+                  Alle Spelers
+                </CardTitle>
+                <CardDescription>
+                  Klik op een speler om te bewerken of te verwijderen
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {players.length === 0 ? (
+                  <div className="text-center py-12 text-[#4a5568]">
+                    <Users className="h-12 w-12 mx-auto mb-3 opacity-40" />
+                    <p className="text-lg">Nog geen spelers</p>
+                    <p className="text-sm mt-2">Voeg je eerste speler toe!</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3 max-h-[500px] overflow-y-auto">
+                    {players.map((player) => (
+                      <div 
+                        key={player.id} 
+                        className="flex items-center justify-between p-4 bg-[#f7fafc] rounded-lg border border-gray-200 hover:border-[#2d3748] transition-colors"
+                      >
+                        <div className="flex items-center gap-4">
+                          {/* Avatar */}
+                          <div className="relative">
+                            {player.avatar ? (
+                              <img 
+                                src={player.avatar}
+                                alt={player.nickname || player.name}
+                                className="w-12 h-12 rounded-full object-cover border-2 border-white shadow-sm"
+                              />
+                            ) : (
+                              <div className="w-12 h-12 rounded-full bg-[#2d3748] flex items-center justify-center text-white font-bold">
+                                {player.initials || player.name.substring(0, 2).toUpperCase()}
+                              </div>
+                            )}
+                            <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 rounded-full flex items-center justify-center">
+                              <Edit2 className="h-2.5 w-2.5 text-white" />
+                            </div>
+                          </div>
+                          
+                          {/* Player Info */}
+                          <div className="flex-1">
+                            <div className="font-semibold text-[#2d3748]">
+                              {player.nickname ? (
+                                <span className="flex items-center gap-2">
+                                  {player.nickname}
+                                  <span className="text-xs text-[#4a5568]">({player.name})</span>
+                                </span>
+                              ) : (
+                                player.name
+                              )}
+                            </div>
+                            <div className="text-xs text-[#4a5568]">
+                              {player.initials || player.name.substring(0, 2).toUpperCase()} • {player.email || 'Geen email'}
+                            </div>
+                          </div>
+                        </div>
+                        
+                        {/* Actions */}
+                        <div className="flex gap-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => openPlayerEdit(player)}
+                          >
+                            <Edit2 className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            onClick={() => handleDeletePlayer(player.id, player.name)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Player Edit Modal */}
+            {showPlayerForm && editingPlayer && (
+              <Card className="bg-white border-2 border-[#4a5568]/30 shadow-lg">
+                <CardHeader>
+                  <CardTitle className="text-[#2d3748] flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Edit2 className="h-5 w-5 text-[#2d3748]" />
+                      Speler Bewerken
+                    </div>
+                    <Button variant="ghost" size="sm" onClick={() => setShowPlayerForm(false)}>
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div>
+                    <Label htmlFor="editName">Naam</Label>
+                    <Input
+                      id="editName"
+                      value={playerForm.name}
+                      onChange={(e) => setPlayerForm({...playerForm, name: e.target.value})}
+                    />
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor="editNickname">Nickname (Grappig! 🎭)</Label>
+                    <Input
+                      id="editNickname"
+                      value={playerForm.nickname}
+                      onChange={(e) => setPlayerForm({...playerForm, nickname: e.target.value})}
+                      placeholder="Bijv. The Dart King 👑"
+                    />
+                  </div>
+
+                  <div>
+                    <label htmlFor="editAvatar" className="text-sm font-medium text-[#4a5568] mb-2 block">Avatar Upload</label>
+                    <div className="flex items-center gap-4">
+                      {editingPlayer.avatar ? (
+                        <img 
+                          src={editingPlayer.avatar}
+                          alt="Current avatar"
+                          className="w-20 h-20 rounded-full object-cover border-2 border-gray-300"
+                        />
+                      ) : (
+                        <div className="w-20 h-20 rounded-full bg-[#2d3748] flex items-center justify-center text-white font-bold">
+                          {editingPlayer.initials || editingPlayer.name.substring(0, 2).toUpperCase()}
+                        </div>
+                      )}
+                      <Input
+                        id="editAvatar"
+                        type="file"
+                        accept="image/*"
+                        onChange={handleAvatarUpload}
+                        disabled={isUploadingAvatar}
+                        className="flex-1"
+                      />
+                    </div>
+                    {isUploadingAvatar && (
+                      <RefreshCw className="h-5 w-5 text-[#2d3748] animate-spin" />
+                    )}
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <Label htmlFor="editInitials">Initialen</Label>
+                      <Input
+                        id="editInitials"
+                        value={playerForm.initials}
+                        onChange={(e) => setPlayerForm({...playerForm, initials: e.target.value})}
+                        maxLength={3}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="editEmail">Email (optioneel)</Label>
+                      <Input
+                        id="editEmail"
+                        type="email"
+                        value={playerForm.email}
+                        onChange={(e) => setPlayerForm({...playerForm, email: e.target.value})}
+                        placeholder="email@voorbeeld.nl"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex gap-3">
+                    <Button 
+                      onClick={handlePlayerFormSubmit}
+                      className="flex-1 bg-[#4a5568] hover:bg-[#2d3748] text-white"
+                    >
+                      <Save className="h-4 w-4 mr-2" />
+                      Opslaan
+                    </Button>
+                    <Button 
+                      variant="outline"
+                      onClick={() => {
+                        setShowPlayerForm(false)
+                        setEditingPlayer(null)
+                      }}
+                      className="flex-1"
+                    >
+                      Annuleren
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        )
+
       default:
         return null
     }
@@ -1866,7 +2229,21 @@ export default function DartsApp() {
                   <SelectContent className="bg-white border-gray-300">
                     {players.map((player) => (
                       <SelectItem key={player.id} value={player.id} className="text-[#2d3748]">
-                        {player.initials} • {player.name}
+                        <div className="flex items-center gap-2">
+                          {player.avatar ? (
+                            <img 
+                              src={player.avatar}
+                              alt={player.nickname || player.name}
+                              className="w-5 h-5 rounded-full object-cover border border-gray-300"
+                            />
+                          ) : (
+                            <User className="h-4 w-4 text-[#4a5568]" />
+                          )}
+                          <span>
+                            {player.nickname || player.name}
+                            {player.nickname && ` (${player.initials})`}
+                          </span>
+                        </div>
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -1995,46 +2372,54 @@ export default function DartsApp() {
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
           <div className="lg:col-span-3">
             <Tabs defaultValue="home" className="w-full">
-              <TabsList className="grid w-full grid-cols-5 bg-[#f7fafc] border border-gray-200 rounded-lg p-1">
+              <TabsList className="grid w-full grid-cols-6 bg-[#f7fafc] border border-gray-200 rounded-lg p-0.5 overflow-x-auto">
                 <TabsTrigger 
                   value="home" 
-                  className="data-[state=active]:bg-[#2d3748] data-[state=active]:text-white rounded-md text-sm"
+                  className="data-[state=active]:bg-[#2d3748] data-[state=active]:text-white rounded-md text-xs"
                   onClick={() => setActiveTab('home')}
                 >
-                  <Target className="h-4 w-4" />
-                  <span className="hidden sm:inline">Home</span>
+                  <Target className="h-3 w-3" />
+                  <span>Home</span>
                 </TabsTrigger>
                 <TabsTrigger 
                   value="challenges"
-                  className="data-[state=active]:bg-[#2d3748] data-[state=active]:text-white rounded-md text-sm"
+                  className="data-[state=active]:bg-[#2d3748] data-[state=active]:text-white rounded-md text-xs"
                   onClick={() => setActiveTab('challenges')}
                 >
-                  <BookOpen className="h-4 w-4" />
-                  <span className="hidden sm:inline">Uitleg</span>
+                  <BookOpen className="h-3 w-3" />
+                  <span>Uitleg</span>
                 </TabsTrigger>
                 <TabsTrigger 
                   value="training"
-                  className="data-[state=active]:bg-[#2d3748] data-[state=active]:text-white rounded-md text-sm"
+                  className="data-[state=active]:bg-[#2d3748] data-[state=active]:text-white rounded-md text-xs"
                   onClick={() => setActiveTab('training')}
                 >
-                  <Gamepad2 className="h-4 w-4" />
-                  <span className="hidden sm:inline">Training</span>
+                  <Gamepad2 className="h-3 w-3" />
+                  <span>Training</span>
                 </TabsTrigger>
                 <TabsTrigger 
                   value="scoreboard"
-                  className="data-[state=active]:bg-[#2d3748] data-[state=active]:text-white rounded-md text-sm"
+                  className="data-[state=active]:bg-[#2d3748] data-[state=active]:text-white rounded-md text-xs"
                   onClick={() => setActiveTab('scoreboard')}
                 >
-                  <Swords className="h-4 w-4" />
-                  <span className="hidden sm:inline">Wedstrijd</span>
+                  <Swords className="h-3 w-3" />
+                  <span>Wedstrijd</span>
                 </TabsTrigger>
                 <TabsTrigger 
                   value="score-tracker"
-                  className="data-[state=active]:bg-[#2d3748] data-[state=active]:text-white rounded-md text-sm"
+                  className="data-[state=active]:bg-[#2d3748] data-[state=active]:text-white rounded-md text-xs"
                   onClick={() => setActiveTab('score-tracker')}
                 >
-                  <Calculator className="h-4 w-4" />
-                  <span className="hidden sm:inline">Score</span>
+                  <Calculator className="h-3 w-3" />
+                  <span>Score</span>
+                </TabsTrigger>
+                <TabsTrigger 
+                  value="management"
+                  className="data-[state=active]:bg-[#2d3748] data-[state=active]:text-white rounded-md text-xs"
+                  onClick={() => setActiveTab('management')}
+                >
+                  <Users className="h-3 w-3" />
+                  <span>Beheer</span>
                 </TabsTrigger>
               </TabsList>
 
@@ -2055,6 +2440,10 @@ export default function DartsApp() {
               </TabsContent>
 
               <TabsContent value="score-tracker">
+                {renderContent()}
+              </TabsContent>
+
+              <TabsContent value="management">
                 {renderContent()}
               </TabsContent>
             </Tabs>

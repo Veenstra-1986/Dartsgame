@@ -14,6 +14,8 @@ model Player {
   id        String   @id @default(cuid())
   name      String
   email     String?  @unique
+  nickname  String?  // Fun nickname for players
+  avatar    String?  // Path to uploaded avatar image
   initials  String?  // For leaderboard display
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

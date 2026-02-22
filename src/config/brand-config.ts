@@ -31,7 +31,7 @@ export const brandConfig = {
   // Logo instellingen
   logo: {
     // Pad naar je logo (plaats logo bestanden in de /public folder)
-    path: '/marimecs-logo.svg',
+    path: '/marimecs-logo.png',
     
     // Alt tekst voor toegankelijkheid
     alt: 'Marimecs Logo',

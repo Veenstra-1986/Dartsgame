@@ -18,16 +18,17 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const body = await request.json()
-    const { name, email, initials } = body
+    const { name, email, nickname, initials } = body
 
     if (!name) {
-      return NextResponse.json({ error: 'Name is required' }, { status: 400 })
+      return NextResponse.json({ error: 'Naam is verplicht' }, { status: 400 })
     }
 
     const player = await db.player.create({
       data: {
         name,
         email,
+        nickname,
         initials: initials || name.substring(0, 2).toUpperCase()
       }
     })
@@ -35,6 +36,54 @@ export async function POST(request: Request) {
     return NextResponse.json(player, { status: 201 })
   } catch (error) {
     console.error('Error creating player:', error)
-    return NextResponse.json({ error: 'Failed to create player' }, { status: 500 })
+    return NextResponse.json({ error: 'Speler aanmaken mislukt' }, { status: 500 })
+  }
+}
+
+// PUT update player
+export async function PUT(request: Request) {
+  try {
+    const body = await request.json()
+    const { id, name, nickname, avatar, initials } = body
+
+    if (!id) {
+      return NextResponse.json({ error: 'Speler ID is verplicht' }, { status: 400 })
+    }
+
+    const player = await db.player.update({
+      where: { id },
+      data: {
+        ...(name && { name }),
+        ...(nickname !== undefined && { nickname }),
+        ...(avatar !== undefined && { avatar }),
+        ...(initials !== undefined && { initials })
+      }
+    })
+
+    return NextResponse.json(player)
+  } catch (error) {
+    console.error('Error updating player:', error)
+    return NextResponse.json({ error: 'Speler bijwerken mislukt' }, { status: 500 })
+  }
+}
+
+// DELETE player
+export async function DELETE(request: Request) {
+  try {
+    const { searchParams } = new URL(request.url)
+    const id = searchParams.get('id')
+
+    if (!id) {
+      return NextResponse.json({ error: 'Speler ID is verplicht' }, { status: 400 })
+    }
+
+    await db.player.delete({
+      where: { id }
+    })
+
+    return NextResponse.json({ success: true })
+  } catch (error) {
+    console.error('Error deleting player:', error)
+    return NextResponse.json({ error: 'Speler verwijderen mislukt' }, { status: 500 })
   }
 }
