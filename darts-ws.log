@@ -1,0 +1,51 @@
+$ bun --hot index.ts
+🎯 Darts WebSocket Service running on port 3003
+   Socket.IO endpoint: ws://localhost:3003
+Client connected: nGhRpoGs0zsVSscmAAAB
+Client connected: lbW7n9luilpJfMiMAAAD
+Client disconnected: nGhRpoGs0zsVSscmAAAB
+Client connected: j9xy44tOYEF2pNayAAAF
+Client disconnected: lbW7n9luilpJfMiMAAAD
+Client j9xy44tOYEF2pNayAAAF identified as player: cmlukxtm30001o35lc3az8zid
+Client j9xy44tOYEF2pNayAAAF identified as player: cmlukxtul0002o35lm103txh3
+Client disconnected: j9xy44tOYEF2pNayAAAF
+Client connected: Ue1U47l1ZrhMg01MAAAH
+Client disconnected: Ue1U47l1ZrhMg01MAAAH
+Client connected: UMlzQpnPfjcag29hAAAJ
+Client connected: R0q_hQYbTi0v3JNLAAAL
+Client disconnected: UMlzQpnPfjcag29hAAAJ
+Client connected: uN67fC8kNmc1qFtyAAAN
+Client disconnected: R0q_hQYbTi0v3JNLAAAL
+Client disconnected: uN67fC8kNmc1qFtyAAAN
+Client connected: 1pR2JZUqInB0X7GFAAAP
+Client connected: Cj1hcCMR4DHTYQztAAAR
+Client disconnected: 1pR2JZUqInB0X7GFAAAP
+Client connected: FKP4a264QgP6zfmkAAAT
+Client disconnected: Cj1hcCMR4DHTYQztAAAR
+Client disconnected: FKP4a264QgP6zfmkAAAT
+Client connected: tNlwbQxMqXoWrCLfAAAV
+Client disconnected: tNlwbQxMqXoWrCLfAAAV
+Client connected: Fai4nIQWDLONkT25AAAX
+Client connected: gS8rwcl4NwKrR3VBAAAZ
+Client disconnected: Fai4nIQWDLONkT25AAAX
+Client disconnected: gS8rwcl4NwKrR3VBAAAZ
+Client connected: gmw1m5cFy5hvLqzfAAAb
+Client connected: Xiq3AKcgPmaWSJ3NAAAd
+Client disconnected: gmw1m5cFy5hvLqzfAAAb
+Client disconnected: Xiq3AKcgPmaWSJ3NAAAd
+Client connected: iNqv1SCgJIOJr0WBAAAf
+Client connected: RFD4nDwyVfQPSqpVAAAh
+Client disconnected: iNqv1SCgJIOJr0WBAAAf
+Client connected: VNSSe4fV7u7ijgGmAAAj
+Client connected: k1b6eRTouxHcJ_3BAAAl
+Client disconnected: RFD4nDwyVfQPSqpVAAAh
+Client disconnected: VNSSe4fV7u7ijgGmAAAj
+Client connected: k5kikZ3G1lzF7fNsAAAn
+Client disconnected: k1b6eRTouxHcJ_3BAAAl
+Client connected: 0mKzfuift62-4IOsAAAp
+Client disconnected: k5kikZ3G1lzF7fNsAAAn
+Client disconnected: 0mKzfuift62-4IOsAAAp
+Client connected: rQAlD11FFBm4fk3EAAAr
+Client connected: 9NtUu4uWfz7htpSCAAAt
+Client disconnected: rQAlD11FFBm4fk3EAAAr
+Client disconnected: 9NtUu4uWfz7htpSCAAAt

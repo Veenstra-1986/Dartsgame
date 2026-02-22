@@ -1,0 +1,21 @@
+PRIMARY COLORS:
+- Primary hex code: #2d3748 (dark navy)
+- Secondary hex code: #f7fafc (light gray/white)
+- Accent hex code: #4a5568 (medium gray)
+
+BACKGROUND:
+- Main background color: #ffffff (white)
+- Header background: #f7fafc (light gray)
+- Footer background: #2d3748 (dark navy)
+
+TYPOGRAPHY:
+- Font style: Sans-serif (clean, modern)
+- Text colors: #2d3748 (dark navy) for headings, #4a5568 (medium gray) for body text
+
+STYLE:
+- Design style: Corporate/minimalist
+- Key visual elements: Nautical imagery (boats, yachts), geometric shapes, professional photography
+
+NAVIGATION:
+- Navigation bar style: Horizontal menu with dark text on light background
+- Button styles: Dark background (#4a5568) with white text, rounded corners
