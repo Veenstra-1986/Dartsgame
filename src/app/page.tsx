@@ -799,6 +799,9 @@ export default function DartsApp() {
 
   const handleAddPlayer = async (e: React.FormEvent) => {
     e.preventDefault()
+    
+    console.log('handleAddPlayer called', { name: newPlayerName, initials: newPlayerInitials })
+    
     if (!newPlayerName.trim()) {
       alert('Vul alstublieft een naam in!')
       return
@@ -815,8 +818,11 @@ export default function DartsApp() {
         })
       })
 
+      console.log('API response status:', res.status)
+      
       if (res.ok) {
         const player = await res.json()
+        console.log('Player created:', player)
         setPlayers([...players, player])
         setSelectedPlayer(player.id)
         setNewPlayerName('')
@@ -825,6 +831,7 @@ export default function DartsApp() {
         alert(`Speler "${newPlayerName}" toegevoegd!`)
       } else {
         const error = await res.json()
+        console.error('API error:', error)
         alert('Fout bij toevoegen: ' + (error.error || 'Onbekende fout'))
       }
     } catch (error) {
@@ -2020,9 +2027,9 @@ export default function DartsApp() {
                 <form onSubmit={handleAddPlayer} className="space-y-4">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <div>
-                      <Label htmlFor="playerName">Naam *</Label>
+                      <Label htmlFor="addPlayerName">Naam *</Label>
                       <Input
-                        id="playerName"
+                        id="addPlayerName"
                         value={newPlayerName}
                         onChange={(e) => setNewPlayerName(e.target.value)}
                         placeholder="Bijv. Jan de Vries"
@@ -2031,9 +2038,9 @@ export default function DartsApp() {
                       />
                     </div>
                     <div>
-                      <Label htmlFor="playerInitials">Initialen</Label>
+                      <Label htmlFor="addPlayerInitials">Initialen</Label>
                       <Input
-                        id="playerInitials"
+                        id="addPlayerInitials"
                         value={newPlayerInitials}
                         onChange={(e) => setNewPlayerInitials(e.target.value)}
                         placeholder="JD"
@@ -2044,7 +2051,7 @@ export default function DartsApp() {
                   </div>
                   <Button 
                     type="submit"
-                    disabled={isSubmitting}
+                    disabled={isSubmitting || !newPlayerName.trim()}
                     className="w-full bg-[#4a5568] hover:bg-[#2d3748] text-white"
                   >
                     {isSubmitting ? 'Toevoegen...' : 'Nieuwe Speler Toevoegen'}
@@ -2353,9 +2360,9 @@ export default function DartsApp() {
               <form onSubmit={handleAddPlayer} className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <Label htmlFor="name" className="text-[#4a5568]">Naam *</Label>
+                    <Label htmlFor="addPlayerNameHeader" className="text-[#4a5568]">Naam *</Label>
                     <Input
-                      id="name"
+                      id="addPlayerNameHeader"
                       value={newPlayerName}
                       onChange={(e) => setNewPlayerName(e.target.value)}
                       placeholder="Bijv. Jan de Vries"
@@ -2365,9 +2372,9 @@ export default function DartsApp() {
                     />
                   </div>
                   <div>
-                    <Label htmlFor="initials" className="text-[#4a5568]">Initialen</Label>
+                    <Label htmlFor="addPlayerInitialsHeader" className="text-[#4a5568]">Initialen</Label>
                     <Input
-                      id="initials"
+                      id="addPlayerInitialsHeader"
                       value={newPlayerInitials}
                       onChange={(e) => setNewPlayerInitials(e.target.value)}
                       placeholder="JD"
@@ -2378,7 +2385,7 @@ export default function DartsApp() {
                   </div>
                 </div>
                 <div className="flex gap-3 justify-end">
-                  <Button type="submit" className="bg-[#4a5568] hover:bg-[#2d3748] text-white" disabled={isSubmitting}>
+                  <Button type="submit" className="bg-[#4a5568] hover:bg-[#2d3748] text-white" disabled={isSubmitting || !newPlayerName.trim()}>
                     {isSubmitting ? 'Toevoegen...' : 'Toevoegen'}
                   </Button>
                   <Button type="button" variant="outline" onClick={() => setShowAddPlayer(false)} className="border-gray-300 text-[#4a5568] hover:bg-gray-50" disabled={isSubmitting}>
