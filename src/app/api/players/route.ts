@@ -24,6 +24,8 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Naam is verplicht' }, { status: 400 })
     }
 
+    console.log('Creating player:', { name, email, nickname, initials })
+
     const player = await db.player.create({
       data: {
         name,
@@ -33,10 +35,17 @@ export async function POST(request: Request) {
       }
     })
 
+    console.log('Player created successfully:', player.id)
     return NextResponse.json(player, { status: 201 })
   } catch (error) {
     console.error('Error creating player:', error)
-    return NextResponse.json({ error: 'Speler aanmaken mislukt' }, { status: 500 })
+    
+    // Check for unique constraint violation
+    if (error && typeof error === 'object' && 'code' in error && error.code === 'P2002') {
+      return NextResponse.json({ error: 'Email is al in gebruik' }, { status: 409 })
+    }
+    
+    return NextResponse.json({ error: 'Speler aanmaken mislukt', details: error instanceof Error ? error.message : 'Unknown error' }, { status: 500 })
   }
 }
 

@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Trophy, Target, Calendar, Crosshair, User, Plus, Zap, Award, Flame, Anchor, BookOpen, Shield, Clock, Gamepad2, Sword, Users, Swords, Calculator, CheckCircle, Minus, RefreshCw, HelpCircle, List, Undo2, TrendingUp, Play, Upload, X, Edit2, Trash2 } from 'lucide-react'
+import { Trophy, Target, Calendar, Crosshair, User, Plus, Zap, Award, Flame, Anchor, BookOpen, Shield, Clock, Gamepad2, Sword, Users, Swords, Calculator, CheckCircle, Minus, RefreshCw, HelpCircle, List, Undo2, TrendingUp, Play, Upload, X, Edit2, Trash2, Save } from 'lucide-react'
 import brandConfig from '@/config/brand-config'
 
 interface Player {
@@ -718,12 +718,22 @@ export default function DartsApp() {
   const [playerForm, setPlayerForm] = useState({ name: '', email: '', nickname: '', initials: '' })
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false)
 
-  // Load custom logo from localStorage on mount
+  // Load custom logo from database on mount
   useEffect(() => {
-    const savedLogo = localStorage.getItem('customLogoUrl')
-    if (savedLogo) {
-      setCustomLogoUrl(savedLogo)
+    const fetchCustomLogo = async () => {
+      try {
+        const res = await fetch('/api/settings/logo')
+        if (res.ok) {
+          const data = await res.json()
+          if (data.logo) {
+            setCustomLogoUrl(data.logo)
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching custom logo:', error)
+      }
     }
+    fetchCustomLogo()
   }, [])
 
   const fetchData = async () => {
@@ -755,9 +765,19 @@ export default function DartsApp() {
   }
 
   const connectWebSocket = () => {
+    // Only attempt WebSocket connection in development
+    // On Vercel production, the mini-service is not available
+    if (process.env.NODE_ENV === 'production') {
+      console.log('WebSocket disabled in production (Vercel)')
+      return null
+    }
+
     try {
       const socket = io('/?XTransformPort=3003', {
-        transports: ['websocket', 'polling']
+        transports: ['websocket', 'polling'],
+        timeout: 5000,
+        reconnectionAttempts: 2,
+        reconnectionDelay: 1000
       })
 
       socket.on('connect', () => {
@@ -769,13 +789,18 @@ export default function DartsApp() {
         setIsConnected(false)
       })
 
+      socket.on('connect_error', (error) => {
+        console.error('WebSocket connection error (expected in production):', error.message)
+        setIsConnected(false)
+      })
+
       socket.on('leaderboard-update', () => {
         fetchData()
       })
 
       return socket
     } catch (error) {
-      console.error('WebSocket connection error:', error)
+      console.error('WebSocket initialization error:', error)
       return null
     }
   }
@@ -832,7 +857,7 @@ export default function DartsApp() {
       } else {
         const error = await res.json()
         console.error('API error:', error)
-        alert('Fout bij toevoegen: ' + (error.error || 'Onbekende fout'))
+        alert('Fout bij toevoegen: ' + (error.error || 'Onbekende fout') + (error.details ? ` (${error.details})` : ''))
       }
     } catch (error) {
       console.error('Error adding player:', error)
@@ -1050,34 +1075,73 @@ export default function DartsApp() {
     const file = e.target.files?.[0]
     if (!file) return
 
-    // Check file size (max 5MB)
-    const maxSize = 5 * 1024 * 1024
+    // Check file size (max 2MB)
+    const maxSize = 2 * 1024 * 1024
     if (file.size > maxSize) {
-      alert('Bestand is te groot. Maximum is 5MB.')
+      alert('Bestand is te groot. Maximum is 2MB.')
       return
     }
 
     setIsUploadingLogo(true)
     try {
-      // Create object URL for preview
-      const previewUrl = URL.createObjectURL(file)
-      setCustomLogoUrl(previewUrl)
-      localStorage.setItem('customLogoUrl', previewUrl)
-      
-      alert('Logo succesvol bijgewerkt!')
-      setShowLogoUpload(false)
+      // Convert file to base64
+      const reader = new FileReader()
+      reader.onload = async (event) => {
+        const base64Data = event.target?.result as string
+        
+        if (!base64Data) {
+          alert('Kon het bestand niet lezen')
+          setIsUploadingLogo(false)
+          return
+        }
+
+        // Send to API
+        const res = await fetch('/api/settings/logo', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            logoData: base64Data,
+            mimeType: file.type
+          })
+        })
+
+        if (res.ok) {
+          const data = await res.json()
+          setCustomLogoUrl(data.logo)
+          alert('Logo succesvol bijgewerkt!')
+          setShowLogoUpload(false)
+        } else {
+          const error = await res.json()
+          alert('Fout bij uploaden: ' + (error.error || 'Onbekende fout'))
+        }
+      }
+      reader.onerror = () => {
+        alert('Fout bij het lezen van het bestand')
+        setIsUploadingLogo(false)
+      }
+      reader.readAsDataURL(file)
     } catch (error) {
       console.error('Logo upload error:', error)
       alert('Logo upload mislukt')
-    } finally {
       setIsUploadingLogo(false)
     }
   }
 
-  const resetLogo = () => {
-    setCustomLogoUrl('')
-    localStorage.removeItem('customLogoUrl')
-    setShowLogoUpload(false)
+  const resetLogo = async () => {
+    try {
+      const res = await fetch('/api/settings/logo', {
+        method: 'DELETE'
+      })
+      if (res.ok) {
+        setCustomLogoUrl('')
+        setShowLogoUpload(false)
+      } else {
+        alert('Kon logo niet resetten')
+      }
+    } catch (error) {
+      console.error('Error resetting logo:', error)
+      alert('Fout bij resetten van logo')
+    }
   }
 
   const LeaderboardTable = ({ entries, title, icon: Icon }: { entries: LeaderboardEntry[], title: string, icon: any }) => {
@@ -1991,7 +2055,7 @@ export default function DartsApp() {
                         className="mt-1.5"
                       />
                       <p className="text-xs text-[#4a5568] mt-1">
-                        PNG, JPG, SVG, WebP • Max 5MB
+                        PNG, JPG, SVG, WebP • Max 2MB
                       </p>
                     </div>
                     {customLogoUrl && (

@@ -1,55 +1,56 @@
-// Darts Challenge App - Marimecs Dart Club
-
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
-// Players/Club members
 model Player {
   id        String   @id @default(cuid())
   name      String
   email     String?  @unique
-  nickname  String?  // Fun nickname for players
-  avatar    String?  // Path to uploaded avatar image
-  initials  String?  // For leaderboard display
+  initials  String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-
+  avatar    String?
+  nickname  String?
   scores    Score[]
 }
 
-// Daily challenges
 model Challenge {
   id          String   @id @default(cuid())
-  name        String   // e.g., "High Score (3 Pijlen)"
-  description String   // Rules and instructions
-  type        String   // challenge type: high_score, triple_20, bullseye, target_number, etc.
-  targetValue Int?     // For challenges with specific targets
-  date        DateTime // The day this challenge is active
+  name        String
+  description String
+  type        String
+  targetValue Int?
+  date        DateTime
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
-
   scores      Score[]
 }
 
-// Scores submitted by players
 model Score {
-  id          String   @id @default(cuid())
+  id          String    @id @default(cuid())
   playerId    String
   challengeId String
-  score       Int      // The actual score
-  details     String?  // Additional details (JSON string for complex scores)
-  submittedAt DateTime @default(now())
-
-  player      Player   @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  score       Int
+  details     String?
+  submittedAt DateTime  @default(now())
   challenge   Challenge @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+  player      Player    @relation(fields: [playerId], references: [id], onDelete: Cascade)
 
   @@unique([playerId, challengeId])
   @@index([challengeId])
   @@index([playerId])
+}
+
+model SiteSettings {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  value     String
+  mimeType  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
