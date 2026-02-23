@@ -1,26 +1,14 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { io, Socket } from 'socket.io-client'
+import { useSession } from 'next-auth/react'
+import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Badge } from '@/components/ui/badge'
-import { Separator } from '@/components/ui/separator'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Trophy, Target, Calendar, Crosshair, User, Plus, Zap, Award, Flame, Anchor, BookOpen, Shield, Clock, Gamepad2, Sword, Users, Swords, Calculator, CheckCircle, Minus, RefreshCw, HelpCircle, List, Undo2, TrendingUp, Play, Upload, X, Edit2, Trash2, Save } from 'lucide-react'
+import { Trophy, Target, Calendar, Gamepad2, Swords, Calculator, BookOpen, Users, Flame, Award, ArrowRight, User, Lock, TrendingUp, Clock, Shield, Zap, CheckCircle, Minus } from 'lucide-react'
 import brandConfig from '@/config/brand-config'
-
-interface Player {
-  id: string
-  name: string
-  email?: string
-  nickname?: string
-  avatar?: string
-  initials?: string
-}
+import Link from 'next/link'
 
 interface Challenge {
   id: string
@@ -41,180 +29,6 @@ interface LeaderboardEntry {
   isCurrentUser: boolean
 }
 
-// Checkout suggestions
-const CHECKOUT_SUGGESTIONS: { [key: number]: string[] } = {
-  2: ['D1'],
-  3: ['D1', 'D1'],
-  4: ['D2'],
-  5: ['D1', 'D2'],
-  6: ['D3', 'D2', 'D1'],
-  7: ['D3', 'D2'],
-  8: ['D4'],
-  9: ['D1', 'D4'],
-  10: ['D5'],
-  11: ['D3', 'D1', 'D1'],
-  12: ['D6'],
-  13: ['D3', 'D1'],
-  14: ['D7'],
-  15: ['D7', 'D8'],
-  16: ['D8'],
-  17: ['D1', 'D1'],
-  18: ['D4', 'D14'],
-  19: ['D3', 'D7'],
-  20: ['D10'],
-  21: ['D5', 'D16'],
-  22: ['D10', 'D12'],
-  23: ['D7', 'D16'],
-  24: ['D12', 'D12'],
-  25: ['D9', 'D16', 'D8'],
-  26: ['D10', 'D10', 'D6'],
-  27: ['D11', 'D14'],
-  28: ['D14', 'D14'],
-  29: ['D13', 'D13'],
-  30: ['D15', 'D10', 'D5'],
-  31: ['D15', 'D10'],
-  32: ['D16'],
-  33: ['D1', 'D16', 'D8'],
-  34: ['D18', 'D16'],
-  35: ['D19', 'D16'],
-  36: ['D18', 'D18'],
-  37: ['D20', 'D17'],
-  38: ['D20', 'D18'],
-  39: ['D19', 'D20'],
-  40: ['D20', 'D20'],
-  41: ['T9', 'D7'],
-  42: ['T10', 'D6'],
-  43: ['T9', 'D8'],
-  44: ['T12', 'D4'],
-  45: ['T13', 'D3'],
-  46: ['T14', 'D2'],
-  47: ['T15', 'D1'],
-  48: ['T16', 'D16'],
-  49: ['T15', 'D7'],
-  50: ['D25'],
-  51: ['T11', 'D9'],
-  52: ['T12', 'D8'],
-  53: ['T13', 'D7'],
-  54: ['T14', 'D6'],
-  55: ['T15', 'D5'],
-  56: ['T16', 'D4'],
-  57: ['T17', 'D3'],
-  58: ['T18', 'D2'],
-  59: ['T19', 'D1'],
-  60: ['D20', 'D20'],
-  61: ['T11', 'D14'],
-  62: ['T12', 'D13'],
-  63: ['T13', 'D12'],
-  64: ['T14', 'D11'],
-  65: ['T15', 'D10'],
-  66: ['T16', 'D9'],
-  67: ['T17', 'D8'],
-  68: ['T18', 'D7'],
-  69: ['T19', 'D6'],
-  70: ['T14', 'D14'],
-  71: ['T13', 'D16'],
-  72: ['T16', 'D12'],
-  73: ['T17', 'D11'],
-  74: ['T18', 'D10'],
-  75: ['T19', 'D9'],
-  76: ['D20', 'D18'],
-  77: ['T19', 'D10'],
-  78: ['T18', 'D12'],
-  79: ['T13', 'D20'],
-  80: ['D20', 'D20'],
-  81: ['T19', 'D12'],
-  82: ['T18', 'D14'],
-  83: ['T17', 'D16'],
-  84: ['D20', 'D22'],
-  85: ['T15', 'D20'],
-  86: ['T18', 'D16'],
-  87: ['T17', 'D18'],
-  88: ['T16', 'D20'],
-  89: ['T19', 'D16'],
-  90: ['D20', 'D25'],
-  91: ['T17', 'D20'],
-  92: ['T20', 'D16'],
-  93: ['T19', 'D18'],
-  94: ['T18', 'D20'],
-  95: ['T19', 'D19'],
-  96: ['D20', 'D28'],
-  97: ['T19', 'D20'],
-  98: ['T20', 'D19'],
-  99: ['T19', 'D21'],
-  100: ['D20', 'D20'],
-  101: ['T17', 'D25'],
-  102: ['T20', 'D21'],
-  103: ['T19', 'D23'],
-  104: ['T19', 'D24'],
-  105: ['T20', 'D25'],
-  106: ['T20', 'D23'],
-  107: ['T19', 'D25'],
-  108: ['T20', 'D24'],
-  109: ['T19', 'D26'],
-  110: ['T20', 'D25'],
-  111: ['T19', 'D27'],
-  112: ['T20', 'D26'],
-  113: ['T19', 'D28'],
-  114: ['T20', 'D27'],
-  115: ['T19', 'D29'],
-  116: ['T20', 'D28'],
-  117: ['T17', 'D33'],
-  118: ['T20', 'D29'],
-  119: ['T19', 'D31'],
-  120: ['D20', 'D20'],
-  121: ['T19', 'D32'],
-  122: ['T20', 'D31'],
-  123: ['T19', 'D33'],
-  124: ['T20', 'D32'],
-  125: ['T19', 'D34'],
-  126: ['T20', 'D33'],
-  127: ['T19', 'D35'],
-  128: ['T20', 'D34'],
-  129: ['T19', 'D36'],
-  130: ['T20', 'D35'],
-  131: ['T19', 'D37'],
-  132: ['T20', 'D36'],
-  133: ['T19', 'D38'],
-  134: ['T20', 'D37'],
-  135: ['T19', 'D39'],
-  136: ['T20', 'D38'],
-  137: ['T19', 'D40'],
-  138: ['T20', 'D39'],
-  139: ['T19', 'D41'],
-  140: ['D20', 'D20'],
-  141: ['T19', 'D42'],
-  142: ['T20', 'D41'],
-  143: ['T19', 'D43'],
-  144: ['T20', 'D42'],
-  145: ['T19', 'D44'],
-  146: ['T20', 'D43'],
-  147: ['T19', 'D45'],
-  148: ['T20', 'D44'],
-  149: ['T19', 'D46'],
-  150: ['T20', 'D45'],
-  151: ['T19', 'D47'],
-  152: ['T20', 'D46'],
-  153: ['T19', 'D48'],
-  154: ['T20', 'D47'],
-  155: ['T19', 'D49'],
-  156: ['T20', 'D48'],
-  157: ['T19', 'D50'],
-  158: ['T20', 'D49'],
-  159: ['T19', 'D51'],
-  160: ['D20', 'D20'],
-  161: ['T19', 'D52'],
-  162: ['T20', 'D51'],
-  163: ['T19', 'D53'],
-  164: ['T19', 'D54'],
-  165: ['T19', 'D53'],
-  166: ['T19', 'D55'],
-  167: ['T19', 'D55'],
-  168: ['T20', 'D54'],
-  169: ['T19', 'D56'],
-  170: ['T20', 'T18', 'Bull'],
-}
-
-// Challenge Types
 const CHALLENGE_TYPES = [
   {
     id: 'high_score',
@@ -265,7 +79,7 @@ const CHALLENGE_TYPES = [
   {
     id: 'bullseye_blitz',
     name: 'Bullseye Blitz',
-    icon: <Crosshair className="h-6 w-6" />,
+    icon: <Target className="h-6 w-6" />,
     description: 'Raak de Bullseye zo vaak mogelijk!',
     fullDescription: 'Bullseye Blitz is pure concentratie. Raak de Bullseye (50 punten) zo vaak mogelijk in 2 minuten. De buitenste bull (25) telt als half punt. Dit is de ultieme test van je focus en steadiness onder druk!',
     rules: [
@@ -357,7 +171,7 @@ const CHALLENGE_TYPES = [
   {
     id: 'cricket_quick',
     name: 'Cricket Quick',
-    icon: <Sword className="h-6 w-6" />,
+    icon: <Swords className="h-6 w-6" />,
     description: 'Sluit 15-20 en Bull zo snel mogelijk!',
     fullDescription: 'Cricket in snelle versie. Sluit de nummers 15, 16, 17, 18, 19, 20 en Bull. Raak elk nummer 3x (triple telt als 3x). Wie als eerst alles sluit wint! Een tactisch en sneller spel!',
     rules: [
@@ -403,7 +217,7 @@ const CHALLENGE_TYPES = [
   {
     id: 'seven',
     name: 'Seven',
-    icon: <Play className="h-6 w-6" />,
+    icon: <Target className="h-6 w-6" />,
     description: 'Raak 7-16, 9-12, 11-14, 13-10 in volgorde!',
     fullDescription: 'Een klassieke oefening die je helpt om snel tussen nummers te schakelen. Gooi de paren in volgorde: 7-16, 9-12, 11-14, 13-10. Hoe minder pijlen, hoe beter!',
     rules: [
@@ -471,7 +285,6 @@ const CHALLENGE_TYPES = [
   }
 ]
 
-// Training Games
 const TRAINING_GAMES = [
   {
     id: '101',
@@ -620,103 +433,71 @@ const TRAINING_GAMES = [
     difficulty: 'Gemiddeld',
     duration: '15-20 minuten',
     startingScore: 0
-  },
-  {
-    id: 'halve_it',
-    name: 'Halve It',
-    icon: <Crosshair className="h-6 w-6" />,
-    description: 'Gooi 3 pijlen op het target nummer.',
-    fullDescription: 'Een spannende oefening die accuracy beloont. Gooi 3 pijlen op het target nummer en alleen de hoogste score telt. Raak je niets? Dan wordt je score gehalveerd! Raak je een dubbele? Dan verdubbel je score!',
-    rules: [
-      'Target nummers: 20, 16, 7, 14, 10, 8 (in die volgorde)',
-      'Gooi 3 pijlen, alleen hoogste telt',
-      'Raak je niets? Score wordt gehalveerd',
-      'Raak een dubbele? Score wordt verdubbeld',
-      'Begin met 100 punten',
-      'Doel: eindig met zo hoog mogelijke score'
-    ],
-    tips: [
-      'Accuracy is belangrijker dan score',
-      'Focus op het raken van het nummer',
-      'Beter een lage score dan halveren',
-      'Triples en doubles zijn risicovol maar belonend',
-      'Wees consistent en voorzichtig'
-    ],
-    difficulty: 'Gemiddeld',
-    duration: '10-15 minuten',
-    startingScore: 0
-  },
-  {
-    id: 'bobs_27',
-    name: 'Bob\'s 27',
-    icon: <Zap className="h-6 w-6" />,
-    description: 'Begin met 27 punten. Raak een dubbele? -1.',
-    fullDescription: 'Een unieke dubbele oefening. Begin met 27 punten. Elke ronde kies je 3 verschillende doubles. Raak een dubbele? -1 punt. Mist? +1 punt. Wie als eerste op 0 is, wint!',
-    rules: [
-      'Begin met 27 punten',
-      'Kies 3 verschillende doubles per ronde',
-      'Raak een dubbele = -1 punt',
-      'Mis = +1 punt',
-      'Doel: zo snel mogelijk op 0',
-      'Kies makkelijke doubles (D16, D8, D18, D20)'
-    ],
-    tips: [
-      'Kies makkelijke doubles (D16, D8)',
-      'Consistentie is belangrijker dan snelheid',
-      'Probeer triples te vermijden',
-      'Verlies je geduld niet',
-      'Oefen alle doubles regelmatig'
-    ],
-    difficulty: 'Gemiddeld',
-    duration: '10-15 minuten',
-    startingScore: 27
   }
 ]
 
+const LeaderboardTable = ({ entries, title, icon: Icon }: { entries: LeaderboardEntry[], title: string, icon: any }) => {
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center gap-2">
+        <Icon className="h-4 w-4 text-[#2d3748]" />
+        <h3 className="font-semibold text-sm text-[#2d3748] uppercase tracking-wide">{title}</h3>
+      </div>
+      {entries.length === 0 ? (
+        <p className="text-center py-8 text-[#4a5568] text-sm">Nog geen scores</p>
+      ) : (
+        entries.slice(0, 5).map((entry) => (
+          <div
+            key={entry.rank}
+            className="group relative overflow-hidden rounded-lg border bg-white border-gray-200 hover:border-[#4a5568] hover:shadow-md transition-all duration-200"
+          >
+            <div className="flex items-center justify-between p-3">
+              <div className="flex items-center gap-3">
+                {entry.avatar ? (
+                  <img 
+                    src={entry.avatar}
+                    alt={entry.nickname || entry.playerName}
+                    className="w-8 h-8 rounded-full object-cover border-2 border-white shadow-sm"
+                  />
+                ) : (
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs ${
+                    entry.rank <= 3 
+                      ? 'bg-[#2d3748] text-white' 
+                      : 'bg-gray-100 text-[#4a5568]'
+                  }`}>
+                    {entry.rank <= 3 ? ['🥇', '🥈', '🥉'][entry.rank - 1] : entry.rank}
+                  </div>
+                )}
+                <div>
+                  <div className="font-semibold text-[#2d3748] text-sm">
+                    {entry.nickname || entry.playerName}
+                  </div>
+                </div>
+              </div>
+              <span className="text-base font-semibold text-[#2d3748]">
+                {entry.score}
+              </span>
+            </div>
+          </div>
+        ))
+      )}
+    </div>
+  )
+}
+
 export default function DartsApp() {
-  const [selectedPlayer, setSelectedPlayer] = useState<string>('')
-  const [showAddPlayer, setShowAddPlayer] = useState(false)
-  const [newPlayerName, setNewPlayerName] = useState('')
-  const [newPlayerInitials, setNewPlayerInitials] = useState('')
-  const [players, setPlayers] = useState<Player[]>([])
+  const { data: session, status } = useSession()
+  const router = useRouter()
+  const [activeTab, setActiveTab] = useState('home')
   const [currentChallenge, setCurrentChallenge] = useState<Challenge | null>(null)
   const [todayLeaderboard, setTodayLeaderboard] = useState<LeaderboardEntry[]>([])
   const [weekLeaderboard, setWeekLeaderboard] = useState<LeaderboardEntry[]>([])
   const [overallLeaderboard, setOverallLeaderboard] = useState<LeaderboardEntry[]>([])
-  const [scoreInput, setScoreInput] = useState('')
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [hasSubmittedToday, setHasSubmittedToday] = useState(false)
-  const [isConnected, setIsConnected] = useState(false)
-  const [activeTab, setActiveTab] = useState('home')
-  const [socketRef, setSocketRef] = useState<Socket | null>(null)
-
-  // Score tracker state
-  const [gameType, setGameType] = useState<'101' | '301' | '501'>(brandConfig.game.defaultScoreType as any)
-  const [currentScore, setCurrentScore] = useState(parseInt(brandConfig.game.defaultScoreType))
-  const [dartsThrown, setDartsThrown] = useState(0)
-  const [scoresHistory, setScoresHistory] = useState<Array<{gameType: string, startingScore: number, finalScore: number, darts: number, date: string}>>([])
-  const [throwHistory, setThrowHistory] = useState<Array<{throwNum: number, score: number, remainingScore: number, darts: number}>>([])
-  const [manualScoreInput, setManualScoreInput] = useState('')
-  const [currentThrowScores, setCurrentThrowScores] = useState<number[]>([])
-
-  // Match/Scoreboard state
-  const [matches, setMatches] = useState<any[]>([])
+  const [customLogoUrl, setCustomLogoUrl] = useState<string>('')
 
   // Detail view state
   const [selectedChallenge, setSelectedChallengeDetail] = useState<typeof CHALLENGE_TYPES[0] | null>(null)
   const [selectedTrainingGame, setSelectedTrainingGame] = useState<typeof TRAINING_GAMES[0] | null>(null)
-
-  // Logo state
-  const [customLogoUrl, setCustomLogoUrl] = useState<string>('')
-  const [showLogoUpload, setShowLogoUpload] = useState(false)
-  const [isUploadingLogo, setIsUploadingLogo] = useState(false)
-
-  // Player management state
-  const [editingPlayer, setEditingPlayer] = useState<Player | null>(null)
-  const [isDeletingPlayer, setIsDeletingPlayer] = useState<string | null>(null)
-  const [showPlayerForm, setShowPlayerForm] = useState(false)
-  const [playerForm, setPlayerForm] = useState({ name: '', email: '', nickname: '', initials: '' })
-  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false)
 
   // Load custom logo from database on mount
   useEffect(() => {
@@ -738,12 +519,6 @@ export default function DartsApp() {
 
   const fetchData = async () => {
     try {
-      const playersRes = await fetch('/api/players')
-      if (playersRes.ok) {
-        const playersData = await playersRes.json()
-        setPlayers(playersData)
-      }
-
       const challengeRes = await fetch('/api/challenges/current')
       if (challengeRes.ok) {
         const challengeData = await challengeRes.json()
@@ -764,447 +539,14 @@ export default function DartsApp() {
     }
   }
 
-  const connectWebSocket = () => {
-    // Only attempt WebSocket connection in development
-    // On Vercel production, the mini-service is not available
-    if (process.env.NODE_ENV === 'production') {
-      console.log('WebSocket disabled in production (Vercel)')
-      return null
-    }
-
-    try {
-      const socket = io('/?XTransformPort=3003', {
-        transports: ['websocket', 'polling'],
-        timeout: 5000,
-        reconnectionAttempts: 2,
-        reconnectionDelay: 1000
-      })
-
-      socket.on('connect', () => {
-        setIsConnected(true)
-        setSocketRef(socket)
-      })
-
-      socket.on('disconnect', () => {
-        setIsConnected(false)
-      })
-
-      socket.on('connect_error', (error) => {
-        console.error('WebSocket connection error (expected in production):', error.message)
-        setIsConnected(false)
-      })
-
-      socket.on('leaderboard-update', () => {
-        fetchData()
-      })
-
-      return socket
-    } catch (error) {
-      console.error('WebSocket initialization error:', error)
-      return null
-    }
-  }
-
-  // Fetch data on mount
   useEffect(() => {
     fetchData()
-    connectWebSocket()
   }, [])
 
-  // Check if current player has submitted today
-  useEffect(() => {
-    if (selectedPlayer && currentChallenge) {
-      fetch(`/api/scores/check?playerId=${selectedPlayer}&challengeId=${currentChallenge.id}`)
-        .then(res => res.json())
-        .then(data => {
-          setHasSubmittedToday(data.hasSubmitted)
-        })
-    }
-  }, [selectedPlayer, currentChallenge])
-
-  const handleAddPlayer = async (e?: React.FormEvent) => {
-    if (e) e.preventDefault()
-    
-    console.log('handleAddPlayer called', { name: newPlayerName, initials: newPlayerInitials })
-    
-    if (!newPlayerName.trim()) {
-      alert('Vul alstublieft een naam in!')
-      return
-    }
-
-    setIsSubmitting(true)
-    try {
-      const res = await fetch('/api/players', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: newPlayerName,
-          initials: newPlayerInitials || newPlayerName.substring(0, 2).toUpperCase()
-        })
-      })
-
-      console.log('API response status:', res.status)
-      
-      if (res.ok) {
-        const player = await res.json()
-        console.log('Player created:', player)
-        setPlayers([...players, player])
-        setSelectedPlayer(player.id)
-        setNewPlayerName('')
-        setNewPlayerInitials('')
-        setShowAddPlayer(false)
-        alert(`Speler "${newPlayerName}" toegevoegd!`)
-      } else {
-        const error = await res.json()
-        console.error('API error:', error)
-        alert('Fout bij toevoegen: ' + (error.error || 'Onbekende fout') + (error.details ? ` (${error.details})` : ''))
-      }
-    } catch (error) {
-      console.error('Error adding player:', error)
-      alert('Er is een fout opgetreden bij het toevoegen van de speler.')
-    } finally {
-      setIsSubmitting(false)
-    }
-  }
-
-  // Player management functions
-  const openPlayerEdit = (player: Player) => {
-    setEditingPlayer(player)
-    setPlayerForm({
-      name: player.name,
-      email: player.email || '',
-      nickname: player.nickname || '',
-      initials: player.initials || ''
-    })
-    setShowPlayerForm(true)
-  }
-
-  const handlePlayerFormSubmit = async () => {
-    if (!editingPlayer) return
-
-    try {
-      const res = await fetch('/api/players', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          id: editingPlayer.id,
-          ...playerForm
-        })
-      })
-
-      if (res.ok) {
-        const updatedPlayer = await res.json()
-        setPlayers(players.map(p => p.id === updatedPlayer.id ? updatedPlayer : p))
-        setShowPlayerForm(false)
-        setEditingPlayer(null)
-        fetchData()
-      }
-    } catch (error) {
-      console.error('Error updating player:', error)
-      alert('Speler bijwerken mislukt')
-    }
-  }
-
-  const handleDeletePlayer = async (playerId: string, playerName: string) => {
-    if (!confirm(`Weet je zeker dat je ${playerName} wilt verwijderen? Dit kan niet ongedaan worden!`)) {
-      return
-    }
-
-    try {
-      const res = await fetch(`/api/players?id=${playerId}`, {
-        method: 'DELETE'
-      })
-
-      if (res.ok) {
-        setPlayers(players.filter(p => p.id !== playerId))
-        if (selectedPlayer === playerId) {
-          setSelectedPlayer('')
-        }
-        fetchData()
-      }
-    } catch (error) {
-      console.error('Error deleting player:', error)
-      alert('Speler verwijderen mislukt')
-    }
-  }
-
-  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!editingPlayer) return
-
-    const file = e.target.files?.[0]
-    if (!file) return
-
-    setIsUploadingAvatar(true)
-    try {
-      const formData = new FormData()
-      formData.append('avatar', file)
-      formData.append('playerId', editingPlayer.id)
-
-      const res = await fetch('/api/players/avatar/upload', {
-        method: 'POST',
-        body: formData
-      })
-
-      if (res.ok) {
-        const data = await res.json()
-        const updatedPlayer = { ...editingPlayer, avatar: data.avatarUrl }
-        setPlayers(players.map(p => p.id === updatedPlayer.id ? updatedPlayer : p))
-        setEditingPlayer(updatedPlayer)
-      }
-    } catch (error) {
-      console.error('Avatar upload error:', error)
-      alert('Avatar upload mislukt')
-    } finally {
-      setIsUploadingAvatar(false)
-    }
-  }
-
-  const handleSubmitScore = async () => {
-    if (!selectedPlayer || !currentChallenge || !scoreInput.trim()) return
-
-    setIsSubmitting(true)
-    try {
-      const res = await fetch('/api/scores', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          playerId: selectedPlayer,
-          challengeId: currentChallenge.id,
-          score: parseInt(scoreInput),
-          details: { date: new Date().toISOString() }
-        })
-      })
-
-      if (res.ok) {
-        setHasSubmittedToday(true)
-        setScoreInput('')
-        fetchData()
-      }
-    } catch (error) {
-      console.error('Error submitting score:', error)
-    } finally {
-      setIsSubmitting(false)
-    }
-  }
-
-  const resetGame = () => {
-    const startScores = { '101': 101, '301': 301, '501': 501 }
-    setCurrentScore(startScores[brandConfig.game.defaultScoreType])
-    setDartsThrown(0)
-    setThrowHistory([])
-    setCurrentThrowScores([])
-    setManualScoreInput('')
-  }
-
-  // Add a score to the current throw (individual dart)
-  const addDartScore = (score: number) => {
-    if (currentScore === 0) return
-    
-    const newScore = currentScore - score
-    
-    // Check for bust (going below 0 or to 1)
-    if (newScore < 0 || newScore === 1) {
-      alert('BUST! Score blijft: ' + currentScore)
-      // Reset current throw
-      setCurrentThrowScores([])
-      return
-    }
-    
-    // Add score to current throw
-    setCurrentThrowScores([...currentThrowScores, score])
-    setCurrentScore(newScore)
-    setDartsThrown(dartsThrown + 1)
-    
-    // Check for checkout (score = 0)
-    if (newScore === 0) {
-      // End turn on checkout
-      finishTurn()
-    }
-  }
-
-  // Finish the current turn and add to history
-  const finishTurn = () => {
-    if (currentThrowScores.length === 0) return
-    
-    const turnScore = currentThrowScores.reduce((sum, score) => sum + score, 0)
-    const throwNumber = throwHistory.length + 1
-    
-    setThrowHistory([...throwHistory, {
-      throwNum: throwNumber,
-      score: turnScore,
-      remainingScore: currentScore,
-      darts: currentThrowScores.length
-    }])
-    
-    setCurrentThrowScores([])
-    setManualScoreInput('')
-  }
-
-  // Undo the last dart
-  const undoLastDart = () => {
-    if (currentThrowScores.length > 0) {
-      // Undo within current turn
-      const lastScore = currentThrowScores[currentThrowScores.length - 1]
-      setCurrentScore(currentScore + lastScore)
-      setCurrentThrowScores(currentThrowScores.slice(0, -1))
-      setDartsThrown(Math.max(0, dartsThrown - 1))
-    } else if (throwHistory.length > 0) {
-      // Undo entire last turn
-      const lastTurn = throwHistory[throwHistory.length - 1]
-      setCurrentScore(lastTurn.remainingScore + lastTurn.score)
-      setDartsThrown(Math.max(0, dartsThrown - lastTurn.darts))
-      setThrowHistory(throwHistory.slice(0, -1))
-    }
-  }
-
-  const saveGameScore = () => {
-    const gameRecord = {
-      gameType,
-      startingScore: { '101': 101, '301': 301, '501': 501 }[gameType],
-      finalScore: currentScore,
-      darts: dartsThrown,
-      date: new Date().toISOString()
-    }
-    setScoresHistory([...scoresHistory, gameRecord])
-    // TODO: Save to API
-    alert(`Game opgeslagen! Score: ${currentScore} in ${dartsThrown} darts`)
-    resetGame()
-  }
-
-  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-
-    // Check file size (max 2MB)
-    const maxSize = 2 * 1024 * 1024
-    if (file.size > maxSize) {
-      alert('Bestand is te groot. Maximum is 2MB.')
-      return
-    }
-
-    setIsUploadingLogo(true)
-    try {
-      // Convert file to base64
-      const reader = new FileReader()
-      reader.onload = async (event) => {
-        const base64Data = event.target?.result as string
-        
-        if (!base64Data) {
-          alert('Kon het bestand niet lezen')
-          setIsUploadingLogo(false)
-          return
-        }
-
-        // Send to API
-        const res = await fetch('/api/settings/logo', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            logoData: base64Data,
-            mimeType: file.type
-          })
-        })
-
-        if (res.ok) {
-          const data = await res.json()
-          setCustomLogoUrl(data.logo)
-          alert('Logo succesvol bijgewerkt!')
-          setShowLogoUpload(false)
-        } else {
-          const error = await res.json()
-          alert('Fout bij uploaden: ' + (error.error || 'Onbekende fout'))
-        }
-      }
-      reader.onerror = () => {
-        alert('Fout bij het lezen van het bestand')
-        setIsUploadingLogo(false)
-      }
-      reader.readAsDataURL(file)
-    } catch (error) {
-      console.error('Logo upload error:', error)
-      alert('Logo upload mislukt')
-      setIsUploadingLogo(false)
-    }
-  }
-
-  const resetLogo = async () => {
-    try {
-      const res = await fetch('/api/settings/logo', {
-        method: 'DELETE'
-      })
-      if (res.ok) {
-        setCustomLogoUrl('')
-        setShowLogoUpload(false)
-      } else {
-        alert('Kon logo niet resetten')
-      }
-    } catch (error) {
-      console.error('Error resetting logo:', error)
-      alert('Fout bij resetten van logo')
-    }
-  }
-
-  const LeaderboardTable = ({ entries, title, icon: Icon }: { entries: LeaderboardEntry[], title: string, icon: any }) => {
-    return (
-      <div className="space-y-3">
-        <div className="flex items-center gap-2">
-          <Icon className="h-4 w-4 text-[#2d3748]" />
-          <h3 className="font-semibold text-sm text-[#2d3748] uppercase tracking-wide">{title}</h3>
-        </div>
-        {entries.length === 0 ? (
-          <p className="text-center py-8 text-[#4a5568] text-sm">Nog geen scores</p>
-        ) : (
-          entries.map((entry) => (
-            <div
-              key={entry.rank}
-              className={`group relative overflow-hidden rounded-lg border transition-all duration-200 ${
-                entry.isCurrentUser 
-                  ? 'bg-[#2d3748]/5 border-[#2d3748]' 
-                  : 'bg-white border-gray-200 hover:border-[#4a5568] hover:shadow-md'
-              }`}
-            >
-              <div className="flex items-center justify-between p-3">
-                <div className="flex items-center gap-3">
-                  {entry.avatar ? (
-                    <img 
-                      src={entry.avatar}
-                      alt={entry.nickname || entry.playerName}
-                      className="w-10 h-10 rounded-full object-cover border-2 border-white shadow-sm"
-                    />
-                  ) : (
-                    <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm ${
-                      entry.rank <= 3 
-                        ? 'bg-[#2d3748] text-white' 
-                        : 'bg-gray-100 text-[#4a5568]'
-                    }`}>
-                      {entry.rank <= 3 ? ['🥇', '🥈', '🥉'][entry.rank - 1] : entry.rank}
-                    </div>
-                  )}
-                  <div>
-                    <div className="font-semibold text-[#2d3748]">
-                      {entry.nickname || entry.playerName}
-                    </div>
-                    <div className="text-xs text-[#4a5568] font-mono">
-                      {entry.initials} {entry.nickname && `(${entry.nickname})`}
-                    </div>
-                  </div>
-                </div>
-                <Badge 
-                  variant={entry.isCurrentUser ? 'default' : 'secondary'} 
-                  className={`text-base font-semibold px-3 py-1 ${
-                    entry.isCurrentUser 
-                      ? 'bg-[#2d3748] hover:bg-[#4a5568]' 
-                      : 'bg-gray-100 text-[#4a5568]'
-                  }`}
-                >
-                  {entry.score}
-                </Badge>
-              </div>
-            </div>
-          ))
-        )}
-      </div>
-    )
+  // Redirect to dashboard if logged in
+  if (status === 'authenticated') {
+    router.push('/dashboard')
+    return null
   }
 
   const getDifficultyColor = (difficulty: string) => {
@@ -1240,45 +582,22 @@ export default function DartsApp() {
                         {currentChallenge.description}
                       </CardDescription>
                     </div>
-                    <Badge className="bg-[#4a5568] text-white">
+                    <span className="bg-[#4a5568] text-white text-xs px-3 py-1 rounded-full">
                       Vandaag
-                    </Badge>
+                    </span>
                   </div>
                 </CardHeader>
                 <CardContent>
-                  {hasSubmittedToday ? (
-                    <div className="bg-green-50 border border-green-200 rounded-lg p-4 text-center">
-                      <CheckCircle className="h-8 w-8 text-green-600 mx-auto mb-2" />
-                      <p className="text-green-800 font-medium">Je hebt al een score ingediend vandaag!</p>
-                      <p className="text-green-600 text-sm mt-1">Probeer morgen weer</p>
-                    </div>
-                  ) : !selectedPlayer ? (
-                    <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 text-center">
-                      <User className="h-8 w-8 text-yellow-600 mx-auto mb-2" />
-                      <p className="text-yellow-800 font-medium">Selecteer eerst een speler</p>
-                    </div>
-                  ) : (
-                    <div className="space-y-4">
-                      <div>
-                        <Label htmlFor="score">Je Score</Label>
-                        <Input
-                          id="score"
-                          type="number"
-                          value={scoreInput}
-                          onChange={(e) => setScoreInput(e.target.value)}
-                          placeholder="Voer je score in"
-                          className="text-2xl h-14 text-center"
-                        />
-                      </div>
-                      <Button 
-                        onClick={handleSubmitScore}
-                        disabled={!scoreInput || isSubmitting}
-                        className="w-full bg-[#4a5568] hover:bg-[#2d3748] text-white"
-                      >
-                        {isSubmitting ? 'Indienen...' : 'Score Indienen'}
+                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 text-center">
+                    <Lock className="h-8 w-8 text-yellow-600 mx-auto mb-2" />
+                    <p className="text-yellow-800 font-medium">Log in om je score in te dienen!</p>
+                    <Link href="/login">
+                      <Button className="mt-3 bg-[#4a5568] hover:bg-[#2d3748] text-white">
+                        <User className="h-4 w-4 mr-2" />
+                        Nu Inloggen
                       </Button>
-                    </div>
-                  )}
+                    </Link>
+                  </div>
                 </CardContent>
               </Card>
             )}
@@ -1311,9 +630,9 @@ export default function DartsApp() {
                           <CardTitle className="text-[#2d3748] text-base">{challenge.name}</CardTitle>
                         </div>
                       </div>
-                      <Badge className={`text-xs ${getDifficultyColor(challenge.difficulty)}`}>
+                      <span className={`text-xs px-2 py-1 rounded-full ${getDifficultyColor(challenge.difficulty)}`}>
                         {challenge.difficulty}
-                      </Badge>
+                      </span>
                     </div>
                   </CardHeader>
                   <CardContent>
@@ -1419,9 +738,9 @@ export default function DartsApp() {
                           <CardTitle className="text-[#2d3748] text-base">{game.name}</CardTitle>
                         </div>
                       </div>
-                      <Badge className={`text-xs ${getDifficultyColor(game.difficulty)}`}>
+                      <span className={`text-xs px-2 py-1 rounded-full ${getDifficultyColor(game.difficulty)}`}>
                         {game.difficulty}
-                      </Badge>
+                      </span>
                     </div>
                   </CardHeader>
                   <CardContent>
@@ -1488,839 +807,14 @@ export default function DartsApp() {
                     </ul>
                   </div>
 
-                  {game.startingScore > 0 && (
+                  {selectedTrainingGame.startingScore > 0 && (
                     <div className="bg-[#2d3748]/5 p-3 rounded-lg border border-[#2d3748]">
                       <div className="flex items-center justify-center gap-2">
                         <span className="text-[#4a5568] text-sm font-medium">Startscore:</span>
-                        <span className="text-xl font-bold text-[#2d3748]">{game.startingScore}</span>
+                        <span className="text-xl font-bold text-[#2d3748]">{selectedTrainingGame.startingScore}</span>
                       </div>
                     </div>
                   )}
-                </CardContent>
-              </Card>
-            )}
-          </div>
-        )
-
-      case 'scoreboard':
-        return (
-          <div className="space-y-6">
-            <div className="flex items-center gap-2 mb-4">
-              <Swords className="h-5 w-5 text-[#2d3748]" />
-              <h2 className="text-xl font-bold text-[#2d3748]">Wedstrijdjes Scoreboard</h2>
-            </div>
-            <p className="text-[#4a5568]">Houd bij wie het beste resultaat van vandaag!</p>
-
-            <Card className="bg-white border border-gray-200 shadow-sm">
-              <CardHeader>
-                <CardTitle>Nieuwe Wedstrijd</CardTitle>
-                <CardDescription>
-                  Registreer een nieuwe wedstrijd tussen twee spelers
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <Label>Speler 1</Label>
-                  <Select>
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Selecteer speler 1" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {players.map((player) => (
-                        <SelectItem key={player.id} value={player.id}>
-                          {player.name} ({player.initials})
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div>
-                  <Label>Speler 2</Label>
-                  <Select>
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Selecteer speler 2" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {players.map((player) => (
-                        <SelectItem key={player.id} value={player.id}>
-                          {player.name} ({player.initials})
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label>Score Speler 1</Label>
-                    <Input type="number" placeholder="Score" />
-                  </div>
-                  <div>
-                    <Label>Score Speler 2</Label>
-                    <Input type="number" placeholder="Score" />
-                  </div>
-                </div>
-
-                <div>
-                  <Label>Spel Type</Label>
-                  <Select>
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Selecteer spel type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="301">301</SelectItem>
-                      <SelectItem value="501">501</SelectItem>
-                      <SelectItem value="cricket">Cricket</SelectItem>
-                      <SelectItem value="practice">Oefenwedstrijd</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <Button className="w-full bg-[#4a5568] hover:bg-[#2d3748] text-white">
-                  <Swords className="h-4 w-4 mr-2" />
-                  Wedstrijd Opslaan
-                </Button>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-white border border-gray-200 shadow-sm">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Trophy className="h-5 w-5 text-yellow-600" />
-                  Laatste Wedstrijden
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {matches.length === 0 ? (
-                  <div className="text-center py-12 text-[#4a5568]">
-                    <Swords className="h-12 w-12 mx-auto mb-3 opacity-40" />
-                    <p className="text-lg">Nog geen wedstrijden gespeeld</p>
-                    <p className="text-sm mt-2">Start de eerste wedstrijd!</p>
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    {matches.slice(0, 10).map((match: any, index) => (
-                      <div key={index} className="flex items-center justify-between p-3 bg-[#f7fafc] rounded-lg border border-gray-200">
-                        <div className="flex items-center gap-3">
-                          <Badge className="bg-green-500 text-white">#{index + 1}</Badge>
-                          <div>
-                            <div className="font-semibold text-[#2d3748]">{match.player1Name} vs {match.player2Name}</div>
-                            <div className="text-xs text-[#4a5568]">{match.gameType}</div>
-                          </div>
-                        </div>
-                        <div className="text-right">
-                          <div className="text-sm text-[#4a5568]">{match.player1Score} - {match.player2Score}</div>
-                          <div className="font-bold text-[#2d3748]">{match.winnerName}</div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            <Card className="bg-white border border-gray-200 shadow-sm">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <TrendingUp className="h-5 w-5 text-[#2d3748]" />
-                  Statistieken Onderlinge Wedstrijden
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="bg-[#f7fafc] p-4 rounded-lg">
-                    <h4 className="font-semibold text-[#2d3748] mb-3">Top Winnaars</h4>
-                    <div className="space-y-2">
-                      {players.slice(0, 5).map((player, idx) => (
-                        <div key={player.id} className="flex items-center justify-between">
-                          <span className="text-sm text-[#4a5568]">{player.name}</span>
-                          <Badge className="bg-[#2d3748] text-white">{Math.floor(Math.random() * 20) + 5} winst</Badge>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="bg-[#f7fafc] p-4 rounded-lg">
-                    <h4 className="font-semibold text-[#2d3748] mb-3">Hoogste Averages</h4>
-                    <div className="space-y-2">
-                      {players.slice(0, 5).map((player, idx) => (
-                        <div key={player.id} className="flex items-center justify-between">
-                          <span className="text-sm text-[#4a5568]">{player.name}</span>
-                          <Badge variant="secondary" className="bg-green-100 text-green-800 border-green-200">
-                            {(Math.random() * 20 + 60).toFixed(1)} avg
-                          </Badge>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        )
-
-      case 'score-tracker':
-        return (
-          <div className="space-y-6">
-            <div className="flex items-center gap-2 mb-4">
-              <Calculator className="h-5 w-5 text-[#2d3748]" />
-              <h2 className="text-xl font-bold text-[#2d3748]">Score Teller (101 / 301 / 501)</h2>
-            </div>
-            <p className="text-[#4a5568] mb-6">Voer je scores in en track je worpen!</p>
-
-            <Card className="bg-white border border-gray-200 shadow-sm">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Gamepad2 className="h-5 w-5 text-[#2d3748]" />
-                  Game Instellingen
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <Label>Spel Type</Label>
-                  <Select value={gameType} onValueChange={(v) => { setGameType(v as any); resetGame(); }}>
-                    <SelectTrigger className="w-full">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="101">101 (Beginner)</SelectItem>
-                      <SelectItem value="301">301 (Standaard)</SelectItem>
-                      <SelectItem value="501">501 (Professional)</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="bg-[#2d3748]/5 p-6 rounded-lg border border-[#2d3748]">
-                  <div className="text-center">
-                    <div className="text-sm text-[#4a5568] mb-2">Huidige Score</div>
-                    <div className="text-6xl font-bold text-[#2d3748]">{currentScore}</div>
-                    <div className="text-xs text-[#4a5568] mt-2">Start: {{ '101': 101, '301': 301, '501': 501 }[gameType]}</div>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-3 gap-3">
-                  <div>
-                    <Label className="text-sm text-[#4a5568]">Pijlen Gegooid</Label>
-                    <div className="text-3xl font-bold text-[#2d3748]">{dartsThrown}</div>
-                  </div>
-                  <div>
-                    <Label className="text-sm text-[#4a5568]">Gemiddel/Worp</Label>
-                    <div className="text-xl font-semibold text-[#2d3748]">
-                      {throwHistory.length > 0 
-                        ? Math.round(throwHistory.reduce((sum, t) => sum + t.score, 0) / throwHistory.length)
-                        : 0}
-                    </div>
-                  </div>
-                  <div>
-                    <Label className="text-sm text-[#4a5568]">Status</Label>
-                    <div className={`text-sm font-medium ${currentScore === 0 ? 'text-green-600' : 'text-[#2d3748]'}`}>
-                      {currentScore === 0 ? 'Uitgechecked! 🎯' : 'In spel'}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex gap-2">
-                  <Button 
-                    onClick={resetGame}
-                    variant="outline"
-                    className="flex-1"
-                  >
-                    <RefreshCw className="h-4 w-4 mr-2" />
-                    Reset
-                  </Button>
-                  <Button 
-                    onClick={undoLastDart}
-                    variant="outline"
-                    className="flex-1"
-                    disabled={dartsThrown === 0}
-                  >
-                    <Undo2 className="h-4 w-4 mr-2" />
-                    Ongedaan Maken
-                  </Button>
-                  <Button 
-                    onClick={saveGameScore}
-                    className="flex-1 bg-[#4a5568] hover:bg-[#2d3748] text-white"
-                  >
-                    <Trophy className="h-4 w-4 mr-2" />
-                    Opslaan
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Checkout Suggesties - Automatisch weergegeven bij scores onder 170 */}
-            {currentScore > 0 && currentScore <= 170 && (
-              <Card className="bg-gradient-to-r from-yellow-50 to-orange-50 border border-yellow-200 shadow-sm">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-[#2d3748]">
-                    <Zap className="h-5 w-5 text-yellow-600" />
-                    Checkout Suggestie: {currentScore}
-                  </CardTitle>
-                  <CardDescription>
-                    Beste checkout route om uit te checken
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <div className="space-y-2">
-                    {CHECKOUT_SUGGESTIONS[currentScore as keyof typeof CHECKOUT_SUGGESTIONS]?.map((suggestion, idx) => (
-                      <div 
-                        key={idx}
-                        className="p-3 bg-white rounded-lg border border-yellow-200 hover:border-[#2d3748] transition-colors"
-                      >
-                        <div className="font-mono text-lg font-bold text-[#2d3748]">{suggestion}</div>
-                      </div>
-                    ))}
-                  </div>
-                  <div className="bg-white/70 p-3 rounded-lg border border-yellow-200">
-                    <p className="text-xs text-yellow-800">
-                      <strong>💡 Tip:</strong> Oefen deze routes! De "Big Checkouts" (170, 167, 164, 161, 160) komen het vaakst voor.
-                    </p>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            <Card className="bg-white border border-gray-200 shadow-sm">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Crosshair className="h-5 w-5 text-[#2d3748]" />
-                  Score Invoer
-                </CardTitle>
-                <CardDescription>
-                  Voer de score in voor elke pijl (max 3 per beurt)
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <Label htmlFor="manualScore">Handmatige Score Invoer</Label>
-                  <div className="flex gap-2 mt-2">
-                    <Input
-                      id="manualScore"
-                      type="number"
-                      value={manualScoreInput}
-                      onChange={(e) => setManualScoreInput(e.target.value)}
-                      placeholder="Voer score in (0-60)"
-                      min={0}
-                      max={60}
-                      className="flex-1"
-                    />
-                    <Button 
-                      onClick={() => {
-                        const score = parseInt(manualScoreInput)
-                        if (score >= 0 && score <= 60) {
-                          addDartScore(score)
-                          setManualScoreInput('')
-                        }
-                      }}
-                      disabled={!manualScoreInput || currentThrowScores.length >= 3 || currentScore === 0}
-                      className="bg-[#4a5568] hover:bg-[#2d3748] text-white"
-                    >
-                      <Plus className="h-4 w-4 mr-2" />
-                      Voeg Toe
-                    </Button>
-                  </div>
-                </div>
-
-                {currentThrowScores.length > 0 && (
-                  <div className="bg-[#f7fafc] p-4 rounded-lg border border-gray-200">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="font-semibold text-[#2d3748]">Huidige Worp ({currentThrowScores.length}/3)</span>
-                      <Button 
-                        onClick={finishTurn}
-                        size="sm"
-                        variant="outline"
-                        disabled={currentThrowScores.length === 0}
-                      >
-                        Beëindig Beurt
-                      </Button>
-                    </div>
-                    <div className="flex gap-3">
-                      {[0, 1, 2].map((i) => (
-                        <div 
-                          key={i}
-                          className={`w-16 h-16 rounded-lg flex items-center justify-center font-bold text-lg
-                            ${currentThrowScores[i] !== undefined 
-                              ? 'bg-[#2d3748] text-white' 
-                              : 'bg-gray-100 text-gray-400'}`}
-                        >
-                          {currentThrowScores[i] !== undefined ? currentThrowScores[i] : '-'}
-                        </div>
-                      ))}
-                    </div>
-                    <div className="mt-2 text-sm text-[#4a5568]">
-                      Totaal deze beurt: <span className="font-bold text-[#2d3748]">{currentThrowScores.reduce((a, b) => a + b, 0)}</span>
-                    </div>
-                  </div>
-                )}
-
-                <div>
-                  <Label className="mb-2 block">Snelle Scores</Label>
-                  <div className="grid grid-cols-7 gap-2">
-                    {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20].map((num) => (
-                      <Button
-                        key={num}
-                        variant="outline"
-                        size="sm"
-                        onClick={() => addDartScore(num)}
-                        disabled={currentThrowScores.length >= 3 || currentScore === 0}
-                        className={`text-sm ${num === 0 ? 'bg-red-50 border-red-200 text-red-700' : ''}`}
-                      >
-                        {num}
-                      </Button>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label className="mb-2 block text-sm">Doubles (D1-D20)</Label>
-                    <div className="grid grid-cols-5 gap-1">
-                      {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20].map((num) => (
-                        <Button
-                          key={`D${num}`}
-                          variant="outline"
-                          size="sm"
-                          onClick={() => addDartScore(num * 2)}
-                          disabled={currentThrowScores.length >= 3 || currentScore === 0}
-                          className="text-xs font-mono"
-                        >
-                          D{num}
-                        </Button>
-                      ))}
-                    </div>
-                  </div>
-                  <div>
-                    <Label className="mb-2 block text-sm">Triples (T1-T20)</Label>
-                    <div className="grid grid-cols-5 gap-1">
-                      {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20].map((num) => (
-                        <Button
-                          key={`T${num}`}
-                          variant="outline"
-                          size="sm"
-                          onClick={() => addDartScore(num * 3)}
-                          disabled={currentThrowScores.length >= 3 || currentScore === 0}
-                          className="text-xs font-mono"
-                        >
-                          T{num}
-                        </Button>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-
-                <div>
-                  <Label className="mb-2 block">Bullseye</Label>
-                  <div className="flex gap-2">
-                    <Button
-                      variant="outline"
-                      onClick={() => addDartScore(25)}
-                      disabled={currentThrowScores.length >= 3 || currentScore === 0}
-                      className="flex-1"
-                    >
-                      Outer Bull (25)
-                    </Button>
-                    <Button
-                      variant="outline"
-                      onClick={() => addDartScore(50)}
-                      disabled={currentThrowScores.length >= 3 || currentScore === 0}
-                      className="flex-1 font-bold bg-[#2d3748] text-white"
-                    >
-                      Bullseye (50)
-                    </Button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-white border border-gray-200 shadow-sm">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <List className="h-5 w-5 text-[#2d3748]" />
-                  Worp Geschiedenis
-                </CardTitle>
-                <CardDescription>
-                  Overzicht van alle worpen
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                {throwHistory.length === 0 ? (
-                  <p className="text-center py-8 text-[#4a5568]">Nog geen worpen geregistreerd</p>
-                ) : (
-                  <div className="overflow-x-auto">
-                    <table className="w-full">
-                      <thead>
-                        <tr className="border-b border-gray-200">
-                          <th className="text-left py-2 px-3 text-sm font-semibold text-[#2d3748]">Worp</th>
-                          <th className="text-left py-2 px-3 text-sm font-semibold text-[#2d3748]">Pijlen</th>
-                          <th className="text-left py-2 px-3 text-sm font-semibold text-[#2d3748]">Score</th>
-                          <th className="text-left py-2 px-3 text-sm font-semibold text-[#2d3748]">Rest</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {throwHistory.map((throw_) => (
-                          <tr key={throw_.throwNum} className="border-b border-gray-100 hover:bg-[#f7fafc]">
-                            <td className="py-2 px-3">
-                              <Badge variant="outline" className="font-mono">
-                                #{throw_.throwNum}
-                              </Badge>
-                            </td>
-                            <td className="py-2 px-3 text-sm text-[#4a5568]">{throw_.darts}</td>
-                            <td className="py-2 px-3">
-                              <span className="font-bold text-[#2d3748]">{throw_.score}</span>
-                            </td>
-                            <td className="py-2 px-3">
-                              <span className={`font-mono font-bold ${throw_.remainingScore <= 100 ? 'text-green-600' : 'text-[#2d3748]'}`}>
-                                {throw_.remainingScore}
-                              </span>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            <Card className="bg-white border border-gray-200 shadow-sm">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Trophy className="h-5 w-5 text-[#2d3748]" />
-                  Spel Geschiedenis
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {scoresHistory.length === 0 ? (
-                  <p className="text-center py-8 text-[#4a5568]">Nog geen gespeelde games</p>
-                ) : (
-                  <div className="space-y-2 max-h-64 overflow-y-auto">
-                    {scoresHistory.slice(-10).reverse().map((game, index) => (
-                      <div key={index} className="flex items-center justify-between p-2 bg-[#f7fafc] rounded">
-                        <div className="text-sm">
-                          <span className="font-medium">{game.gameType}</span>
-                          <span className="text-[#4a5568] ml-2">{new Date(game.date).toLocaleDateString('nl-NL')}</span>
-                        </div>
-                        <div className="flex items-center gap-4">
-                          <span className="text-sm text-[#4a5568]">{game.darts} darts</span>
-                          <Badge variant={game.finalScore === 0 ? 'bg-green-500' : 'bg-blue-500'} className="text-white">
-                            {game.finalScore}
-                          </Badge>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </div>
-        )
-
-      case 'management':
-        return (
-          <div className="space-y-6">
-            <div className="flex items-center gap-2 mb-4">
-              <Users className="h-5 w-5 text-[#2d3748]" />
-              <h2 className="text-xl font-bold text-[#2d3748]">Beheer</h2>
-            </div>
-            <p className="text-[#4a5568] mb-6">Beheer logo, spelers, avatars en nicknames!</p>
-
-            {/* Logo Beheer */}
-            <Card className="bg-white border border-gray-200 shadow-sm">
-              <CardHeader>
-                <CardTitle className="text-[#2d3748] flex items-center gap-2">
-                  <Anchor className="h-5 w-5 text-[#4a5568]" />
-                  Logo Beheer
-                </CardTitle>
-                <CardDescription>
-                  Upload een eigen logo of reset naar standaard
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-center gap-4">
-                  <img 
-                    src={customLogoUrl || brandConfig.logo.path}
-                    alt="Current logo"
-                    className="h-16 w-auto border border-gray-300 rounded-lg bg-white"
-                  />
-                  <div className="flex-1 space-y-2">
-                    <div>
-                      <Label htmlFor="logoUpload">Upload Nieuw Logo</Label>
-                      <Input
-                        id="logoUpload"
-                        type="file"
-                        accept="image/*"
-                        onChange={handleLogoUpload}
-                        disabled={isUploadingLogo}
-                        className="mt-1.5"
-                      />
-                      <p className="text-xs text-[#4a5568] mt-1">
-                        PNG, JPG, SVG, WebP • Max 2MB
-                      </p>
-                    </div>
-                    {customLogoUrl && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={resetLogo}
-                        className="text-red-600 hover:text-red-700 border-red-300"
-                      >
-                        <Trash2 className="h-4 w-4 mr-2" />
-                        Reset naar Standaard Logo
-                      </Button>
-                    )}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Speler Beheer */}
-            <Card className="bg-white border border-gray-200 shadow-sm">
-              <CardHeader>
-                <CardTitle className="text-[#2d3748] flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Plus className="h-5 w-5 text-[#4a5568]" />
-                    Speler Toevoegen
-                  </div>
-                  <Badge variant="secondary" className="bg-[#2d3748]/10 text-[#4a5568] border-[#4a5568]/20">
-                    {players.length} spelers
-                  </Badge>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    <div>
-                      <Label htmlFor="addPlayerName">Naam *</Label>
-                      <Input
-                        id="addPlayerName"
-                        value={newPlayerName}
-                        onChange={(e) => setNewPlayerName(e.target.value)}
-                        placeholder="Bijv. Jan de Vries"
-                        disabled={isSubmitting}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter' && newPlayerName.trim()) {
-                            handleAddPlayer()
-                          }
-                        }}
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="addPlayerInitials">Initialen</Label>
-                      <Input
-                        id="addPlayerInitials"
-                        value={newPlayerInitials}
-                        onChange={(e) => setNewPlayerInitials(e.target.value)}
-                        placeholder="JD"
-                        maxLength={3}
-                        disabled={isSubmitting}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter' && newPlayerName.trim()) {
-                            handleAddPlayer()
-                          }
-                        }}
-                      />
-                    </div>
-                  </div>
-                  <Button 
-                    onClick={handleAddPlayer}
-                    disabled={isSubmitting || !newPlayerName.trim()}
-                    className="w-full bg-[#4a5568] hover:bg-[#2d3748] text-white"
-                  >
-                    {isSubmitting ? 'Toevoegen...' : 'Nieuwe Speler Toevoegen'}
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-white border border-gray-200 shadow-sm">
-              <CardHeader>
-                <CardTitle className="text-[#2d3748] flex items-center gap-2">
-                  <Users className="h-5 w-5 text-[#2d3748]" />
-                  Alle Spelers
-                </CardTitle>
-                <CardDescription>
-                  Klik op een speler om te bewerken of te verwijderen
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                {players.length === 0 ? (
-                  <div className="text-center py-12 text-[#4a5568]">
-                    <Users className="h-12 w-12 mx-auto mb-3 opacity-40" />
-                    <p className="text-lg">Nog geen spelers</p>
-                    <p className="text-sm mt-2">Voeg je eerste speler toe!</p>
-                  </div>
-                ) : (
-                  <div className="space-y-3 max-h-[500px] overflow-y-auto">
-                    {players.map((player) => (
-                      <div 
-                        key={player.id} 
-                        className="flex items-center justify-between p-4 bg-[#f7fafc] rounded-lg border border-gray-200 hover:border-[#2d3748] transition-colors"
-                      >
-                        <div className="flex items-center gap-4">
-                          {/* Avatar */}
-                          <div className="relative">
-                            {player.avatar ? (
-                              <img 
-                                src={player.avatar}
-                                alt={player.nickname || player.name}
-                                className="w-12 h-12 rounded-full object-cover border-2 border-white shadow-sm"
-                              />
-                            ) : (
-                              <div className="w-12 h-12 rounded-full bg-[#2d3748] flex items-center justify-center text-white font-bold">
-                                {player.initials || player.name.substring(0, 2).toUpperCase()}
-                              </div>
-                            )}
-                            <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 rounded-full flex items-center justify-center">
-                              <Edit2 className="h-2.5 w-2.5 text-white" />
-                            </div>
-                          </div>
-                          
-                          {/* Player Info */}
-                          <div className="flex-1">
-                            <div className="font-semibold text-[#2d3748]">
-                              {player.nickname ? (
-                                <span className="flex items-center gap-2">
-                                  {player.nickname}
-                                  <span className="text-xs text-[#4a5568]">({player.name})</span>
-                                </span>
-                              ) : (
-                                player.name
-                              )}
-                            </div>
-                            <div className="text-xs text-[#4a5568]">
-                              {player.initials || player.name.substring(0, 2).toUpperCase()} • {player.email || 'Geen email'}
-                            </div>
-                          </div>
-                        </div>
-                        
-                        {/* Actions */}
-                        <div className="flex gap-2">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => openPlayerEdit(player)}
-                          >
-                            <Edit2 className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="destructive"
-                            onClick={() => handleDeletePlayer(player.id, player.name)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Player Edit Modal */}
-            {showPlayerForm && editingPlayer && (
-              <Card className="bg-white border-2 border-[#4a5568]/30 shadow-lg">
-                <CardHeader>
-                  <CardTitle className="text-[#2d3748] flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Edit2 className="h-5 w-5 text-[#2d3748]" />
-                      Speler Bewerken
-                    </div>
-                    <Button variant="ghost" size="sm" onClick={() => setShowPlayerForm(false)}>
-                      <X className="h-4 w-4" />
-                    </Button>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div>
-                    <Label htmlFor="editName">Naam</Label>
-                    <Input
-                      id="editName"
-                      value={playerForm.name}
-                      onChange={(e) => setPlayerForm({...playerForm, name: e.target.value})}
-                    />
-                  </div>
-                  
-                  <div>
-                    <Label htmlFor="editNickname">Nickname (Grappig! 🎭)</Label>
-                    <Input
-                      id="editNickname"
-                      value={playerForm.nickname}
-                      onChange={(e) => setPlayerForm({...playerForm, nickname: e.target.value})}
-                      placeholder="Bijv. The Dart King 👑"
-                    />
-                  </div>
-
-                  <div>
-                    <label htmlFor="editAvatar" className="text-sm font-medium text-[#4a5568] mb-2 block">Avatar Upload</label>
-                    <div className="flex items-center gap-4">
-                      {editingPlayer.avatar ? (
-                        <img 
-                          src={editingPlayer.avatar}
-                          alt="Current avatar"
-                          className="w-20 h-20 rounded-full object-cover border-2 border-gray-300"
-                        />
-                      ) : (
-                        <div className="w-20 h-20 rounded-full bg-[#2d3748] flex items-center justify-center text-white font-bold">
-                          {editingPlayer.initials || editingPlayer.name.substring(0, 2).toUpperCase()}
-                        </div>
-                      )}
-                      <Input
-                        id="editAvatar"
-                        type="file"
-                        accept="image/*"
-                        onChange={handleAvatarUpload}
-                        disabled={isUploadingAvatar}
-                        className="flex-1"
-                      />
-                    </div>
-                    {isUploadingAvatar && (
-                      <RefreshCw className="h-5 w-5 text-[#2d3748] animate-spin" />
-                    )}
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <Label htmlFor="editInitials">Initialen</Label>
-                      <Input
-                        id="editInitials"
-                        value={playerForm.initials}
-                        onChange={(e) => setPlayerForm({...playerForm, initials: e.target.value})}
-                        maxLength={3}
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="editEmail">Email (optioneel)</Label>
-                      <Input
-                        id="editEmail"
-                        type="email"
-                        value={playerForm.email}
-                        onChange={(e) => setPlayerForm({...playerForm, email: e.target.value})}
-                        placeholder="email@voorbeeld.nl"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="flex gap-3">
-                    <Button 
-                      onClick={handlePlayerFormSubmit}
-                      className="flex-1 bg-[#4a5568] hover:bg-[#2d3748] text-white"
-                    >
-                      <Save className="h-4 w-4 mr-2" />
-                      Opslaan
-                    </Button>
-                    <Button 
-                      variant="outline"
-                      onClick={() => {
-                        setShowPlayerForm(false)
-                        setEditingPlayer(null)
-                      }}
-                      className="flex-1"
-                    >
-                      Annuleren
-                    </Button>
-                  </div>
                 </CardContent>
               </Card>
             )}
@@ -2332,164 +826,97 @@ export default function DartsApp() {
     }
   }
 
+  if (status === 'loading') {
+    return (
+      <div className="min-h-screen bg-[#ffffff] flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#4a5568] mx-auto"></div>
+          <p className="mt-4 text-[#4a5568]">Laden...</p>
+        </div>
+      </div>
+    )
+  }
+
   return (
-    <div className="min-h-screen bg-[#ffffff]">
+    <div className="min-h-screen bg-[#ffffff] flex flex-col">
+      {/* Header */}
       <header className="bg-[#f7fafc] border-b border-gray-200 sticky top-0 z-20 shadow-sm">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between flex-wrap gap-4">
             <div className="flex items-center gap-3">
-              <div className="relative group">
-                <img 
-                  src={customLogoUrl || brandConfig.logo.path} 
-                  alt={brandConfig.logo.alt} 
-                  className="h-14 w-auto cursor-pointer hover:opacity-80 transition-opacity rounded-lg"
-                  onClick={() => {
-                    setActiveTab('management')
-                    setShowLogoUpload(false)
-                  }}
-                />
-                <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/50 rounded-lg cursor-pointer">
-                  <Edit2 className="h-5 w-5 text-white" />
-                </div>
-              </div>
+              <img 
+                src={customLogoUrl || brandConfig.logo.path} 
+                alt={brandConfig.logo.alt} 
+                className="h-12 w-auto"
+              />
               {brandConfig.logo.showText && (
                 <div className="hidden sm:block">
                   <p className="text-xs text-[#4a5568] flex items-center gap-1">
                     <Target className="h-3 w-3" />
                     {brandConfig.app.description}
-                    {isConnected && <span className="text-green-600 ml-2">● Live</span>}
                   </p>
                 </div>
               )}
             </div>
 
             <div className="flex items-center gap-3">
-              {players.length > 0 && (
-                <Select value={selectedPlayer} onValueChange={setSelectedPlayer}>
-                  <SelectTrigger className="w-48 sm:w-56 bg-white border-gray-300 text-[#2d3748]">
-                    <User className="h-4 w-4 mr-2 text-[#4a5568]" />
-                    <SelectValue placeholder="Selecteer speler" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-white border-gray-300">
-                    {players.map((player) => (
-                      <SelectItem key={player.id} value={player.id} className="text-[#2d3748]">
-                        <div className="flex items-center gap-2">
-                          {player.avatar ? (
-                            <img 
-                              src={player.avatar}
-                              alt={player.nickname || player.name}
-                              className="w-5 h-5 rounded-full object-cover border border-gray-300"
-                            />
-                          ) : (
-                            <User className="h-4 w-4 text-[#4a5568]" />
-                          )}
-                          <span>
-                            {player.nickname || player.name}
-                            {player.nickname && ` (${player.initials})`}
-                          </span>
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
-              <Button
-                variant="default"
-                size="sm"
-                onClick={() => {
-                  setShowAddPlayer(!showAddPlayer)
-                  // Scroll to form if opening
-                  if (!showAddPlayer) {
-                    setTimeout(() => {
-                      document.getElementById('addPlayerForm')?.scrollIntoView({ behavior: 'smooth', block: 'center' })
-                    }, 100)
-                  }
-                }}
-                className="bg-[#4a5568] hover:bg-[#2d3748] text-white rounded-lg"
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                <span className="hidden sm:inline">Speler</span>
-              </Button>
+              <Link href="/login">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="border-[#4a5568] text-[#4a5568] hover:bg-[#f7fafc]"
+                >
+                  <Lock className="h-4 w-4 mr-2" />
+                  Inloggen
+                </Button>
+              </Link>
+              <Link href="/register">
+                <Button
+                  size="sm"
+                  className="bg-[#4a5568] hover:bg-[#2d3748] text-white rounded-lg"
+                >
+                  <User className="h-4 w-4 mr-2" />
+                  Registreren
+                </Button>
+              </Link>
             </div>
           </div>
         </div>
       </header>
 
-      {showAddPlayer && (
-        <div id="addPlayerForm" className="container mx-auto px-4 py-6 animate-in fade-in slide-in-from-top-4">
-          <Card className="bg-white border-2 border-[#4a5568] shadow-lg">
-            <CardHeader>
-              <CardTitle className="text-[#2d3748] flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <User className="h-5 w-5 text-[#4a5568]" />
-                  Nieuwe speler toevoegen
-                </div>
-                <Button variant="ghost" size="sm" onClick={() => setShowAddPlayer(false)}>
-                  <X className="h-4 w-4" />
-                </Button>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="addPlayerNameHeader" className="text-[#4a5568]">Naam *</Label>
-                    <Input
-                      id="addPlayerNameHeader"
-                      value={newPlayerName}
-                      onChange={(e) => setNewPlayerName(e.target.value)}
-                      placeholder="Bijv. Jan de Vries"
-                      disabled={isSubmitting}
-                      className="bg-white border-gray-300 text-[#2d3748] placeholder:text-gray-400 mt-1.5"
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' && newPlayerName.trim()) {
-                          handleAddPlayer()
-                        }
-                      }}
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="addPlayerInitialsHeader" className="text-[#4a5568]">Initialen</Label>
-                    <Input
-                      id="addPlayerInitialsHeader"
-                      value={newPlayerInitials}
-                      onChange={(e) => setNewPlayerInitials(e.target.value)}
-                      placeholder="JD"
-                      maxLength={3}
-                      disabled={isSubmitting}
-                      className="bg-white border-gray-300 text-[#2a5568] placeholder:text-gray-400 text-center mt-1.5"
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' && newPlayerName.trim()) {
-                          handleAddPlayer()
-                        }
-                      }}
-                    />
-                  </div>
-                </div>
-                <div className="flex gap-3 justify-end">
-                  <Button 
-                    type="button"
-                    onClick={handleAddPlayer}
-                    className="bg-[#4a5568] hover:bg-[#2d3748] text-white" 
-                    disabled={isSubmitting || !newPlayerName.trim()}
-                  >
-                    {isSubmitting ? 'Toevoegen...' : 'Toevoegen'}
-                  </Button>
-                  <Button type="button" variant="outline" onClick={() => setShowAddPlayer(false)} className="border-gray-300 text-[#4a5568] hover:bg-gray-50" disabled={isSubmitting}>
-                    Annuleren
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+      {/* Hero Section */}
+      <div className="bg-gradient-to-br from-[#2d3748] to-[#4a5568] text-white py-16">
+        <div className="container mx-auto px-4 text-center">
+          <h1 className="text-4xl md:text-5xl font-bold mb-4">
+            Welkom bij {brandConfig.logo.companyName} Dart Club
+          </h1>
+          <p className="text-xl text-white/80 mb-8 max-w-2xl mx-auto">
+            {brandConfig.app.description} - Volg je vooruitgang, daag je vrienden uit en verbeter je spel!
+          </p>
+          <div className="flex flex-wrap justify-center gap-4">
+            <Link href="/register">
+              <Button size="lg" className="bg-white text-[#2d3748] hover:bg-gray-100">
+                <User className="h-5 w-5 mr-2" />
+                Start Nu
+                <ArrowRight className="h-5 w-5 ml-2" />
+              </Button>
+            </Link>
+            <Link href="/login">
+              <Button size="lg" variant="outline" className="border-white text-white hover:bg-white/10">
+                <Lock className="h-5 w-5 mr-2" />
+                Inloggen
+              </Button>
+            </Link>
+          </div>
         </div>
-      )}
+      </div>
 
-      <main className="container mx-auto px-4 py-8">
+      {/* Main Content */}
+      <main className="container mx-auto px-4 py-8 flex-1">
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
           <div className="lg:col-span-3">
             <Tabs defaultValue="home" className="w-full">
-              <TabsList className="grid w-full grid-cols-6 bg-[#f7fafc] border border-gray-200 rounded-lg p-0.5 overflow-x-auto">
+              <TabsList className="grid w-full grid-cols-3 bg-[#f7fafc] border border-gray-200 rounded-lg p-0.5 overflow-x-auto">
                 <TabsTrigger 
                   value="home" 
                   className="data-[state=active]:bg-[#2d3748] data-[state=active]:text-white rounded-md text-xs"
@@ -2514,30 +941,6 @@ export default function DartsApp() {
                   <Gamepad2 className="h-3 w-3" />
                   <span>Training</span>
                 </TabsTrigger>
-                <TabsTrigger 
-                  value="scoreboard"
-                  className="data-[state=active]:bg-[#2d3748] data-[state=active]:text-white rounded-md text-xs"
-                  onClick={() => setActiveTab('scoreboard')}
-                >
-                  <Swords className="h-3 w-3" />
-                  <span>Wedstrijd</span>
-                </TabsTrigger>
-                <TabsTrigger 
-                  value="score-tracker"
-                  className="data-[state=active]:bg-[#2d3748] data-[state=active]:text-white rounded-md text-xs"
-                  onClick={() => setActiveTab('score-tracker')}
-                >
-                  <Calculator className="h-3 w-3" />
-                  <span>Score</span>
-                </TabsTrigger>
-                <TabsTrigger 
-                  value="management"
-                  className="data-[state=active]:bg-[#2d3748] data-[state=active]:text-white rounded-md text-xs"
-                  onClick={() => setActiveTab('management')}
-                >
-                  <Users className="h-3 w-3" />
-                  <span>Beheer</span>
-                </TabsTrigger>
               </TabsList>
 
               <TabsContent value="home" className="mt-4">
@@ -2549,18 +952,6 @@ export default function DartsApp() {
               </TabsContent>
 
               <TabsContent value="training">
-                {renderContent()}
-              </TabsContent>
-
-              <TabsContent value="scoreboard">
-                {renderContent()}
-              </TabsContent>
-
-              <TabsContent value="score-tracker">
-                {renderContent()}
-              </TabsContent>
-
-              <TabsContent value="management">
                 {renderContent()}
               </TabsContent>
             </Tabs>
@@ -2598,30 +989,30 @@ export default function DartsApp() {
             <Card className="bg-white border border-gray-200 shadow-sm">
               <CardHeader>
                 <CardTitle className="text-[#2d3748] text-base flex items-center gap-2">
-                  <Zap className="h-4 w-4 text-[#2d3748]" />
+                  <TrendingUp className="h-4 w-4 text-[#2d3748]" />
                   Statistieken
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
                 <div className="flex justify-between items-center p-3 bg-[#f7fafc] rounded-lg">
                   <span className="text-sm text-[#4a5568]">Actieve Spelers</span>
-                  <Badge variant="secondary" className="bg-[#2d3748]/10 text-[#2d3748] border-[#2a5568]/20 text-base px-3 py-1">
-                    {players.length}
-                  </Badge>
+                  <span className="text-base font-semibold text-[#2d3748] px-3 py-1">
+                    {todayLeaderboard.length > 0 ? '5+' : '-'}
+                  </span>
                 </div>
-                <Separator className="bg-gray-200" />
+                <div className="h-px bg-gray-200" />
                 <div className="flex justify-between items-center p-3 bg-[#f7fafc] rounded-lg">
                   <span className="text-sm text-[#4a5568]">Scores Vandaag</span>
-                  <Badge variant="secondary" className="bg-[#2d3748]/10 text-[#2d3748] border-[#4a5568]/20 text-base px-3 py-1">
+                  <span className="text-base font-semibold text-[#2d3748] px-3 py-1">
                     {todayLeaderboard.length}
-                  </Badge>
+                  </span>
                 </div>
-                <Separator className="bg-gray-200" />
+                <div className="h-px bg-gray-200" />
                 <div className="flex justify-between items-center p-3 bg-[#f7fafc] rounded-lg">
                   <span className="text-sm text-[#4a5568]">Beste Score Vandaag</span>
-                  <Badge className="bg-[#2d3748] text-white text-base px-3 py-1">
+                  <span className="text-base font-bold text-[#2d3748] px-3 py-1">
                     {todayLeaderboard[0]?.score || '-'}
-                  </Badge>
+                  </span>
                 </div>
               </CardContent>
             </Card>
@@ -2629,13 +1020,13 @@ export default function DartsApp() {
         </div>
       </main>
 
+      {/* Footer */}
       <footer className="mt-auto bg-[#2d3748] border-t border-gray-700 py-6">
         <div className="container mx-auto px-4 text-center">
           <p className="text-white text-sm font-medium">
             © {brandConfig.app.year} <span className="font-semibold">{brandConfig.logo.companyName}</span> • {brandConfig.app.name}
           </p>
           <p className="text-white/60 text-xs mt-2 flex items-center justify-center gap-2">
-            <Anchor className="h-3 w-3" />
             {brandConfig.app.footerTagline}
           </p>
         </div>

@@ -8,18 +8,69 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
-model Player {
-  id        String   @id @default(cuid())
-  name      String
-  email     String?  @unique
-  initials  String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  avatar    String?
-  nickname  String?
-  scores    Score[]
+// User model - Main user accounts
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  emailVerified DateTime?
+  image         String?
+  password      String?
+  nickname      String?
+  avatar        String?
+  initials      String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  accounts      Account[]
+  sessions      Session[]
+  scores        Score[]
+  matchesAsPlayer1 Match[] @relation("MatchesAsPlayer1")
+  matchesAsPlayer2 Match[] @relation("MatchesAsPlayer2")
+  matchTurns   MatchTurn[]
+  matchMessages MatchMessage[]
+  scoreConfirmations ScoreConfirmation[]
 }
 
+// NextAuth Account model
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+// NextAuth Session model
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// Verification token for email confirmation
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// Challenge model (existing)
 model Challenge {
   id          String   @id @default(cuid())
   name        String
@@ -32,21 +83,94 @@ model Challenge {
   scores      Score[]
 }
 
+// Score model (updated to reference User instead of Player)
 model Score {
   id          String    @id @default(cuid())
-  playerId    String
+  userId      String
   challengeId String
   score       Int
   details     String?
   submittedAt DateTime  @default(now())
   challenge   Challenge @relation(fields: [challengeId], references: [id], onDelete: Cascade)
-  player      Player    @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@unique([playerId, challengeId])
+  @@unique([userId, challengeId])
   @@index([challengeId])
+  @@index([userId])
+}
+
+// Match model - For head-to-head matches
+model Match {
+  id              String    @id @default(cuid())
+  player1Id       String
+  player2Id       String
+  gameType        String    // 301, 501, 701, cricket, etc.
+  player1Score    Int?
+  player2Score    Int?
+  status          MatchStatus @default(IN_PROGRESS)
+  winnerId        String?
+  notes           String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  completedAt     DateTime?
+
+  player1         User      @relation("MatchesAsPlayer1", fields: [player1Id], references: [id], onDelete: Cascade)
+  player2         User      @relation("MatchesAsPlayer2", fields: [player2Id], references: [id], onDelete: Cascade)
+  turns           MatchTurn[]
+  messages        MatchMessage[]
+  confirmations   ScoreConfirmation[]
+}
+
+// MatchTurn model - Individual turns during a match
+model MatchTurn {
+  id        String   @id @default(cuid())
+  matchId   String
+  playerId  String
+  turnOrder Int      // 1, 2, 3, etc.
+  score     Int      // Total score for this turn (3 darts)
+  darts     Int[]    // Individual dart scores [20, 60, 100]
+  createdAt DateTime @default(now())
+
+  match     Match    @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  player    User     @relation(fields: [playerId], references: [id], onDelete: Cascade)
+
+  @@index([matchId])
   @@index([playerId])
 }
 
+// MatchMessage model - Chat during matches
+model MatchMessage {
+  id        String   @id @default(cuid())
+  matchId   String
+  playerId  String
+  message   String
+  createdAt DateTime @default(now())
+
+  match     Match @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  player    User  @relation(fields: [playerId], references: [id], onDelete: Cascade)
+
+  @@index([matchId])
+}
+
+// ScoreConfirmation model - Players must confirm match scores
+model ScoreConfirmation {
+  id            String   @id @default(cuid())
+  matchId       String
+  playerId      String
+  confirmed     Boolean  @default(false)
+  disputed      Boolean  @default(false)
+  disputeReason String?
+  confirmedAt   DateTime?
+  createdAt     DateTime @default(now())
+
+  match         Match @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  player        User  @relation(fields: [playerId], references: [id], onDelete: Cascade)
+
+  @@unique([matchId, playerId])
+  @@index([matchId])
+}
+
+// SiteSettings model (existing)
 model SiteSettings {
   id        String   @id @default(cuid())
   key       String   @unique
@@ -54,4 +178,12 @@ model SiteSettings {
   mimeType  String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+// Enums
+enum MatchStatus {
+  IN_PROGRESS
+  COMPLETED
+  DISPUTED
+  CANCELLED
 }
