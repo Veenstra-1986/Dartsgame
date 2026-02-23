@@ -8,6 +8,7 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
+
 // User model - Main user accounts
 model User {
   id            String    @id @default(cuid())

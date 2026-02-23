@@ -1,10 +1,75 @@
-# 🚀 Welcome to Z.ai Code Scaffold
+# 🎯 Marimecs Darts Challenge App
 
-A modern, production-ready web application scaffold powered by cutting-edge technologies, designed to accelerate your development with [Z.ai](https://chat.z.ai)'s AI-powered coding assistance.
+A comprehensive darts scoring and challenge application with head-to-head matches, leaderboards, and real-time features.
+
+![Marimecs Darts](https://img.shields.io/badge/Next.js-16-black?style=for-the-badge&logo=next.js)
+![TypeScript](https://img.shields.io/badge/TypeScript-5-blue?style=for-the-badge&logo=typescript)
+![Tailwind CSS](https://img.shields.io/badge/Tailwind-4-38bdf8?style=for-the-badge&logo=tailwind-css)
+![Prisma](https://img.shields.io/badge/Prisma-6-2d3748?style=for-the-badge&logo=prisma)
+
+## 🎯 Features
+
+### 🏆 Player Management
+- Add, edit, and delete player profiles
+- Player avatars and statistics
+- Personal best scores tracking
+
+### 📅 Daily Challenges
+- Submit daily challenge scores
+- Track progress over time
+- Compete with other players
+
+### 📊 Leaderboards
+- Today's rankings
+- Weekly leaderboards
+- All-time overall standings
+
+### 🎮 Training Games
+- Multiple training games with instructions:
+  - Around the Clock
+  - Cricket
+  - Killer
+  - Baseball
+  - Shanghai
+  - and more...
+
+### 🎯 Score Tracker
+- 101, 301, 501 game modes
+- Automatic score calculation
+- Bust detection
+- Checkout suggestions
+- Double-out validation
+
+### 👥 Head-to-Head Matches
+- Create matches with other players
+- Turn-based scoring (3 darts per turn)
+- Live scorecard
+- Real-time score updates
+- Multiple game types (301, 501, 701, Cricket)
+
+### ✅ Score Verification
+- Double confirmation system to prevent fraud
+- Dispute mechanism
+- Match status management (IN_PROGRESS, COMPLETED, DISPUTED, CANCELLED)
+
+### 💬 Match Chat
+- In-match messaging between players
+- Message history
+- Typing indicators
+- Real-time updates (with WebSocket service)
+
+### 🔐 User Authentication
+- Secure registration and login
+- Password hashing with bcrypt
+- Session management with NextAuth.js
+- Protected routes
+
+### 📱 Mobile Responsive
+- Works on all device sizes
+- Touch-friendly interface
+- Optimized for mobile gameplay
 
 ## ✨ Technology Stack
-
-This scaffold provides a robust foundation built with:
 
 ### 🎯 Core Framework
 - **⚡ Next.js 16** - The React framework for production with App Router
@@ -29,113 +94,215 @@ This scaffold provides a robust foundation built with:
 ### 🗄️ Database & Backend
 - **🗄️ Prisma** - Next-generation TypeScript ORM
 - **🔐 NextAuth.js** - Complete open-source authentication solution
+- **🐘 PostgreSQL (Supabase)** - Production-ready database hosting
 
-### 🎨 Advanced UI Features
-- **📊 TanStack Table** - Headless UI for building tables and datagrids
-- **🖱️ DND Kit** - Modern drag and drop toolkit for React
-- **📊 Recharts** - Redefined chart library built with React and D3
-- **🖼️ Sharp** - High performance image processing
-
-### 🌍 Internationalization & Utilities
-- **🌍 Next Intl** - Internationalization library for Next.js
-- **📅 Date-fns** - Modern JavaScript date utility library
-- **🪝 ReactUse** - Collection of essential React hooks for modern development
-
-## 🎯 Why This Scaffold?
-
-- **🏎️ Fast Development** - Pre-configured tooling and best practices
-- **🎨 Beautiful UI** - Complete shadcn/ui component library with advanced interactions
-- **🔒 Type Safety** - Full TypeScript configuration with Zod validation
-- **📱 Responsive** - Mobile-first design principles with smooth animations
-- **🗄️ Database Ready** - Prisma ORM configured for rapid backend development
-- **🔐 Auth Included** - NextAuth.js for secure authentication flows
-- **📊 Data Visualization** - Charts, tables, and drag-and-drop functionality
-- **🌍 i18n Ready** - Multi-language support with Next Intl
-- **🚀 Production Ready** - Optimized build and deployment settings
-- **🤖 AI-Friendly** - Structured codebase perfect for AI assistance
+### 🌐 Real-time Features
+- **🔌 Socket.IO** - Real-time bidirectional communication
+- **💬 In-match chat** - Live messaging during matches
+- **📊 Live score updates** - Real-time scorecard updates
 
 ## 🚀 Quick Start
 
+### Prerequisites
+- Node.js 18+ or Bun
+- A Supabase account (for database)
+- A Vercel account (for deployment)
+
+### Local Development
+
 ```bash
+# Clone the repository
+git clone https://github.com/your-username/marimecs-darts.git
+cd marimecs-darts
+
 # Install dependencies
 bun install
+# or
+npm install
+
+# Set up environment variables
+cp .env.example .env
+# Edit .env with your Supabase credentials
+
+# Set up the database
+# 1. Create a project in Supabase
+# 2. Run the setup-database.sql script in Supabase SQL Editor
+# 3. Update DATABASE_URL in .env
+
+# Generate Prisma client
+bun run db:generate
 
 # Start development server
 bun run dev
-
-# Build for production
-bun run build
-
-# Start production server
-bun start
 ```
 
 Open [http://localhost:3000](http://localhost:3000) to see your application running.
 
-## 🤖 Powered by Z.ai
+## 🌐 Deployment
 
-This scaffold is optimized for use with [Z.ai](https://chat.z.ai) - your AI assistant for:
+### Deploy to Vercel
 
-- **💻 Code Generation** - Generate components, pages, and features instantly
-- **🎨 UI Development** - Create beautiful interfaces with AI assistance  
-- **🔧 Bug Fixing** - Identify and resolve issues with intelligent suggestions
-- **📝 Documentation** - Auto-generate comprehensive documentation
-- **🚀 Optimization** - Performance improvements and best practices
+1. **Push code to GitHub**
+   ```bash
+   git add .
+   git commit -m "Initial commit"
+   git push origin main
+   ```
 
-Ready to build something amazing? Start chatting with Z.ai at [chat.z.ai](https://chat.z.ai) and experience the future of AI-powered development!
+2. **Import in Vercel**
+   - Go to [vercel.com](https://vercel.com)
+   - Click "Add New" → "Project"
+   - Import your GitHub repository
+
+3. **Configure Environment Variables**
+   In Vercel Settings → Environment Variables, add:
+   - `DATABASE_URL` - Your Supabase connection string
+   - `NEXTAUTH_SECRET` - Generate with `openssl rand -base64 32`
+   - `NEXTAUTH_URL` - Your Vercel domain
+
+4. **Deploy**
+   - Click "Deploy"
+   - Wait for the build to complete
+
+For detailed deployment instructions, see [GITHUB_DEPLOY_GUIDE.md](./GITHUB_DEPLOY_GUIDE.md)
 
 ## 📁 Project Structure
 
 ```
 src/
-├── app/                 # Next.js App Router pages
-├── components/          # Reusable React components
-│   └── ui/             # shadcn/ui components
-├── hooks/              # Custom React hooks
-└── lib/                # Utility functions and configurations
+├── app/                      # Next.js App Router pages
+│   ├── api/                 # API routes
+│   │   ├── auth/            # Authentication endpoints
+│   │   ├── matches/         # Match management APIs
+│   │   ├── scores/          # Score tracking APIs
+│   │   ├── players/         # Player management APIs
+│   │   └── challenges/      # Daily challenge APIs
+│   ├── dashboard/           # Main dashboard page
+│   ├── matches/             # Match pages
+│   ├── login/               # Login page
+│   └── register/            # Registration page
+├── components/              # Reusable React components
+│   └── ui/                 # shadcn/ui components
+├── hooks/                   # Custom React hooks
+├── lib/                     # Utility functions
+│   ├── db.ts               # Prisma client
+│   └── utils.ts            # Utility functions
+├── config/                  # Configuration files
+└── types/                   # TypeScript type definitions
+
+mini-services/
+├── match-service/           # WebSocket service for matches
+└── darts-ws/               # General WebSocket service
+
+prisma/
+├── schema.prisma           # Database schema
+└── schema.postgres.prisma  # PostgreSQL-specific schema
+
+public/                      # Static assets
+└── marimecs-logo.png       # App logo
 ```
 
-## 🎨 Available Features & Components
+## 🎨 Available Pages & Features
 
-This scaffold includes a comprehensive set of modern web development tools:
+### Main Pages
+- **Home** - Landing page with app overview
+- **Dashboard** - Main hub with challenges, leaderboards, and matches
+- **Login/Register** - User authentication
+- **Match Detail** - Live match with scoring and chat
 
-### 🧩 UI Components (shadcn/ui)
-- **Layout**: Card, Separator, Aspect Ratio, Resizable Panels
-- **Forms**: Input, Textarea, Select, Checkbox, Radio Group, Switch
-- **Feedback**: Alert, Toast (Sonner), Progress, Skeleton
-- **Navigation**: Breadcrumb, Menubar, Navigation Menu, Pagination
-- **Overlay**: Dialog, Sheet, Popover, Tooltip, Hover Card
-- **Data Display**: Badge, Avatar, Calendar
+### Training Games
+- Around the Clock
+- Cricket
+- Killer
+- Baseball
+- Shanghai
+- 180 Practice
+- Checkout Practice
 
-### 📊 Advanced Data Features
-- **Tables**: Powerful data tables with sorting, filtering, pagination (TanStack Table)
-- **Charts**: Beautiful visualizations with Recharts
-- **Forms**: Type-safe forms with React Hook Form + Zod validation
+### Dashboard Sections
+- Daily Challenges - Submit and track daily scores
+- Leaderboards - Today, weekly, and overall rankings
+- Active Matches - View and join matches
+- Create Match - Start a new match with another player
+- Player List - View all registered players
 
-### 🎨 Interactive Features
-- **Animations**: Smooth micro-interactions with Framer Motion
-- **Drag & Drop**: Modern drag-and-drop functionality with DND Kit
-- **Theme Switching**: Built-in dark/light mode support
+## 🔐 Authentication
 
-### 🔐 Backend Integration
-- **Authentication**: Ready-to-use auth flows with NextAuth.js
-- **Database**: Type-safe database operations with Prisma
-- **API Client**: HTTP requests with Fetch + TanStack Query
-- **State Management**: Simple and scalable with Zustand
+The app uses NextAuth.js for secure authentication:
+- Email/password registration
+- Password hashing with bcrypt
+- JWT session strategy
+- Protected routes for authenticated users
 
-### 🌍 Production Features
-- **Internationalization**: Multi-language support with Next Intl
-- **Image Optimization**: Automatic image processing with Sharp
-- **Type Safety**: End-to-end TypeScript with Zod validation
-- **Essential Hooks**: 100+ useful React hooks with ReactUse for common patterns
+## 🗄️ Database Schema
 
-## 🤝 Get Started with Z.ai
+The app uses Prisma ORM with PostgreSQL (Supabase):
+- **User** - User accounts and authentication
+- **Account** - OAuth account linking
+- **Session** - User sessions
+- **Player** - Player profiles and statistics
+- **Challenge** - Daily challenges
+- **Score** - Player scores
+- **Match** - Head-to-head matches
+- **MatchTurn** - Individual turns in matches
+- **MatchMessage** - Match chat messages
+- **ScoreConfirmation** - Match score confirmations
+- **SiteSettings** - App settings and logo
 
-1. **Clone this scaffold** to jumpstart your project
-2. **Visit [chat.z.ai](https://chat.z.ai)** to access your AI coding assistant
-3. **Start building** with intelligent code generation and assistance
-4. **Deploy with confidence** using the production-ready setup
+See `prisma/schema.prisma` for complete schema definition.
+
+## 🧪 Testing
+
+```bash
+# Run linting
+bun run lint
+
+# Test database connection
+# Visit: http://localhost:3000/api/health
+```
+
+## 📝 Scripts
+
+```bash
+bun run dev          # Start development server
+bun run build        # Build for production
+bun run start        # Start production server
+bun run lint         # Run ESLint
+bun run db:push      # Push schema changes to database
+bun run db:generate  # Generate Prisma client
+bun run db:migrate   # Create and apply migrations
+bun run db:reset     # Reset database
+```
+
+## 🔒 Security
+
+- Environment variables for sensitive data (use `.env.example` as template)
+- Password hashing with bcrypt
+- NextAuth.js for secure authentication
+- SQL injection prevention with Prisma ORM
+- XSS protection with React's built-in escaping
+
+## 🌟 Future Enhancements
+
+- [ ] Push notifications for match invitations
+- [ ] Advanced statistics and analytics
+- [ ] Tournament mode
+- [ ] Video tutorials for training games
+- [ ] Social features (friends, following)
+- [ ] More game modes
+
+## 📄 License
+
+This project is private and proprietary to Marimecs.
+
+## 🤝 Contributing
+
+This is an internal project. Please contact the project maintainers before making changes.
+
+## 📞 Support
+
+For issues or questions, please contact the development team.
 
 ---
 
-Built with ❤️ for the developer community. Supercharged by [Z.ai](https://chat.z.ai) 🚀
+Built with ❤️ for darts enthusiasts. Powered by [Next.js](https://nextjs.org), [Prisma](https://www.prisma.io), and [Supabase](https://supabase.com). 🎯
