@@ -15,24 +15,22 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Z.ai Code Scaffold - AI-Powered Development",
-  description: "Modern Next.js scaffold optimized for AI-powered development with Z.ai. Built with TypeScript, Tailwind CSS, and shadcn/ui.",
-  keywords: ["Z.ai", "Next.js", "TypeScript", "Tailwind CSS", "shadcn/ui", "AI development", "React"],
-  authors: [{ name: "Z.ai Team" }],
+  title: "Marimecs Dart Club - Trainen, Competities en Matches",
+  description: "Marimecs Dart Club: Volg je scores, daag vrienden uit, en verbeter je darts spel met dagelijkse challenges, training games en head-to-head matches.",
+  keywords: ["Marimecs", "Darts", "Training", "Challenges", "Matches", "Leaderboard", "501", "Cricket"],
+  authors: [{ name: "Marimecs" }],
   icons: {
-    icon: "https://z-cdn.chatglm.cn/z-ai/static/logo.svg",
+    icon: "/marimecs-logo.png",
   },
   openGraph: {
-    title: "Z.ai Code Scaffold",
-    description: "AI-powered development with modern React stack",
-    url: "https://chat.z.ai",
-    siteName: "Z.ai",
+    title: "Marimecs Dart Club",
+    description: "Trainen, Competities en Matches - Verbeter je darts spel!",
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Z.ai Code Scaffold",
-    description: "AI-powered development with modern React stack",
+    title: "Marimecs Dart Club",
+    description: "Volg je scores, daag vrienden uit en verbeter je spel!",
   },
 };
 
@@ -42,7 +40,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="nl" suppressHydrationWarning>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-background text-foreground`}
       >
