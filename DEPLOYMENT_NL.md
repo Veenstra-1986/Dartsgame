@@ -34,7 +34,7 @@ provider = "postgresql"
 1. Push je code naar GitHub/GitLab/Bitbucket
 2. Ga naar [vercel.com](https://vercel.com)
 3. "Add New Project" → Importeer je repository
-4. Voeg deze environment variables toe:
+4. **Voordat je deployt**, ga naar "Environment Variables" en voeg deze toe:
 
 | Variable | Waarde | Hoe te verkrijgen |
 |----------|--------|------------------|

@@ -41,7 +41,7 @@ npm i -g vercel
 1. Go to [vercel.com](https://vercel.com)
 2. Click "Add New Project"
 3. Import your repository
-4. Configure environment variables (see below)
+4. **Before deploying**, click "Environment Variables" and add the required variables (see Step 4 below)
 
 **Step 4: Configure Environment Variables in Vercel**
 
