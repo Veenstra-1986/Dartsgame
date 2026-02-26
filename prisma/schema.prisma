@@ -1,188 +1,181 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
   url      = env("DATABASE_URL")
 }
 
-// User model - Main user accounts
+// User model for players
 model User {
-  id            String    @id @default(cuid())
-  name          String?
-  email         String    @unique
-  emailVerified DateTime?
-  image         String?
-  password      String?
-  nickname      String?
-  avatar        String?
-  initials      String?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String
+  password  String
+  verified  Boolean  @default(false)
+  verificationToken String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  accounts      Account[]
-  sessions      Session[]
-  scores        Score[]
-  matchesAsPlayer1 Match[] @relation("MatchesAsPlayer1")
-  matchesAsPlayer2 Match[] @relation("MatchesAsPlayer2")
-  matchTurns   MatchTurn[]
-  matchMessages MatchMessage[]
-  scoreConfirmations ScoreConfirmation[]
+  // Personalization
+  accentColor String?  @default("emerald") // "emerald", "blue", "purple", "rose", "amber", "orange", "teal", "slate"
+  logoUrl    String?  // URL to uploaded company logo
+  groupName  String?  // Custom name for the app (e.g., "Bedrijfs Darts")
+
+  // Relations
+  groupMemberships GroupMember[]
+  challengeScores  ChallengeScore[]
+  matchesAsPlayer1 Match[] @relation("Player1")
+  matchesAsPlayer2 Match[] @relation("Player2")
+  matchScores      MatchScore[]
+  trainingProgress TrainingProgress[]
 }
 
-// NextAuth Account model
-model Account {
-  id                String  @id @default(cuid())
-  userId            String
-  type              String
-  provider          String
-  providerAccountId String
-  refresh_token     String? @db.Text
-  access_token      String? @db.Text
-  expires_at        Int?
-  token_type        String?
-  scope             String?
-  id_token          String? @db.Text
-  session_state     String?
+// Group model for leaderboard groups
+model Group {
+  id          String   @id @default(cuid())
+  name        String
+  code        String   @unique // Join code for invitations
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([provider, providerAccountId])
+  // Relations
+  members     GroupMember[]
+  invitations Invitation[]
+  matches     Match[]
 }
 
-// NextAuth Session model
-model Session {
-  id           String   @id @default(cuid())
-  sessionToken String   @unique
-  userId       String
-  expires      DateTime
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+// Group membership
+model GroupMember {
+  id        String   @id @default(cuid())
+  userId    String
+  groupId   String
+  role      String   @default("member") // "admin", "member"
+  joinedAt  DateTime @default(now())
+
+  // Relations
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  group     Group    @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, groupId])
 }
 
-// Verification token for email confirmation
-model VerificationToken {
-  identifier String
-  token      String   @unique
-  expires    DateTime
+// Invitation model for group invitations
+model Invitation {
+  id        String   @id @default(cuid())
+  email     String
+  groupId   String
+  token     String   @unique
+  status    String   @default("pending") // "pending", "accepted", "expired"
+  createdAt DateTime @default(now())
+  expiresAt DateTime
 
-  @@unique([identifier, token])
+  // Relations
+  group     Group    @relation(fields: [groupId], references: [id], onDelete: Cascade)
 }
 
-// Challenge model (existing)
+// Challenge model for daily challenges
 model Challenge {
   id          String   @id @default(cuid())
   name        String
   description String
-  type        String
-  targetValue Int?
-  date        DateTime
+  gameType    String   // "501", "301", "Cricket", "Around the Clock", "High Score", etc.
+  targetScore Int?
+  rules       String
+  scheduledAt DateTime @default(now())
+  expiresAt   DateTime
   createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  scores      Score[]
+
+  // Relations
+  scores      ChallengeScore[]
 }
 
-// Score model (updated to reference User instead of Player)
-model Score {
-  id          String    @id @default(cuid())
+// Challenge score tracking
+model ChallengeScore {
+  id          String   @id @default(cuid())
   userId      String
   challengeId String
   score       Int
-  details     String?
-  submittedAt DateTime  @default(now())
-  challenge   Challenge @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+  completedAt DateTime @default(now())
+
+  // Relations
   user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  challenge   Challenge @relation(fields: [challengeId], references: [id], onDelete: Cascade)
 
   @@unique([userId, challengeId])
-  @@index([challengeId])
-  @@index([userId])
 }
 
-// Match model - For head-to-head matches
+// Match model for head-to-head games
 model Match {
-  id              String    @id @default(cuid())
-  player1Id       String
-  player2Id       String
-  gameType        String    // 301, 501, 701, cricket, etc.
-  player1Score    Int?
-  player2Score    Int?
-  status          MatchStatus @default(IN_PROGRESS)
-  winnerId        String?
-  notes           String?
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-  completedAt     DateTime?
+  id          String   @id @default(cuid())
+  groupId     String
+  player1Id   String
+  player2Id   String
+  gameType    String   // "501", "301", "Cricket", etc.
+  player1Score Int?
+  player2Score Int?
+  winnerId    String?
+  status      String   @default("scheduled") // "scheduled", "in_progress", "completed"
+  scheduledAt DateTime @default(now())
+  completedAt DateTime?
 
-  player1         User      @relation("MatchesAsPlayer1", fields: [player1Id], references: [id], onDelete: Cascade)
-  player2         User      @relation("MatchesAsPlayer2", fields: [player2Id], references: [id], onDelete: Cascade)
-  turns           MatchTurn[]
-  messages        MatchMessage[]
-  confirmations   ScoreConfirmation[]
+  // Relations
+  group       Group     @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  player1     User      @relation("Player1", fields: [player1Id], references: [id])
+  player2     User      @relation("Player2", fields: [player2Id], references: [id])
+  scores      MatchScore[]
 }
 
-// MatchTurn model - Individual turns during a match
-model MatchTurn {
+// Individual scores in a match
+model MatchScore {
   id        String   @id @default(cuid())
   matchId   String
-  playerId  String
-  turnOrder Int      // 1, 2, 3, etc.
-  score     Int      // Total score for this turn (3 darts)
-  darts     Int[]    // Individual dart scores [20, 60, 100]
+  userId    String
+  round     Int
+  score     Int
+  darts     Int      // Number of darts thrown
   createdAt DateTime @default(now())
 
+  // Relations
   match     Match    @relation(fields: [matchId], references: [id], onDelete: Cascade)
-  player    User     @relation(fields: [playerId], references: [id], onDelete: Cascade)
-
-  @@index([matchId])
-  @@index([playerId])
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
-// MatchMessage model - Chat during matches
-model MatchMessage {
-  id        String   @id @default(cuid())
-  matchId   String
-  playerId  String
-  message   String
-  createdAt DateTime @default(now())
+// Training exercises
+model Training {
+  id          String   @id @default(cuid())
+  name        String
+  description String
+  gameType    String
+  target      String
+  difficulty  String   // "beginner", "intermediate", "advanced"
+  order       Int      @default(0)
+  createdAt   DateTime @default(now())
 
-  match     Match @relation(fields: [matchId], references: [id], onDelete: Cascade)
-  player    User  @relation(fields: [playerId], references: [id], onDelete: Cascade)
-
-  @@index([matchId])
+  // Relations
+  progress    TrainingProgress[]
 }
 
-// ScoreConfirmation model - Players must confirm match scores
-model ScoreConfirmation {
-  id            String   @id @default(cuid())
-  matchId       String
-  playerId      String
-  confirmed     Boolean  @default(false)
-  disputed      Boolean  @default(false)
-  disputeReason String?
-  confirmedAt   DateTime?
-  createdAt     DateTime @default(now())
+// User training progress
+model TrainingProgress {
+  id          String   @id @default(cuid())
+  userId      String
+  trainingId  String
+  completed   Boolean  @default(false)
+  bestScore   Int?
+  attempts    Int      @default(0)
+  lastAttempt DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
-  match         Match @relation(fields: [matchId], references: [id], onDelete: Cascade)
-  player        User  @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  // Relations
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  training    Training  @relation(fields: [trainingId], references: [id], onDelete: Cascade)
 
-  @@unique([matchId, playerId])
-  @@index([matchId])
-}
-
-// SiteSettings model (existing)
-model SiteSettings {
-  id        String   @id @default(cuid())
-  key       String   @unique
-  value     String
-  mimeType  String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
-// Enums
-enum MatchStatus {
-  IN_PROGRESS
-  COMPLETED
-  DISPUTED
-  CANCELLED
+  @@unique([userId, trainingId])
 }

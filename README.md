@@ -1,308 +1,227 @@
-# 🎯 Marimecs Darts Challenge App
+# 🎯 DartsPro - Bedrijfs Darts Competitie App
 
-A comprehensive darts scoring and challenge application with head-to-head matches, leaderboards, and real-time features.
+Een complete darts competitie applicatie voor bedrijven met dagelijkse challenges, leaderboards, training tools en een professionele scoreteller.
 
-![Marimecs Darts](https://img.shields.io/badge/Next.js-16-black?style=for-the-badge&logo=next.js)
-![TypeScript](https://img.shields.io/badge/TypeScript-5-blue?style=for-the-badge&logo=typescript)
-![Tailwind CSS](https://img.shields.io/badge/Tailwind-4-38bdf8?style=for-the-badge&logo=tailwind-css)
-![Prisma](https://img.shields.io/badge/Prisma-6-2d3748?style=for-the-badge&logo=prisma)
+## ✨ Features
 
-## 🎯 Features
+- 🎯 **Professionele Scoreteller** met check-out suggesties (501, 301, Cricket)
+- 🏆 **Dagelijkse Challenges** en competitieve leaderboards
+- 📊 **Wedstrijd Statistieken** tussen spelers
+- 🏋️ **Training Oefeningen** voor alle niveaus
+- 👥 **Groepen & Uitnodigingen** met invite codes
+- 🎨 **Personalisatie** - accentkleuren, logo's en app-naam
+- 📱 **Mobile-First Design** met sticky bottom navigatie
+- 🔐 **Gebruikersauthenticatie** met email verificatie
 
-### 🏆 Player Management
-- Add, edit, and delete player profiles
-- Player avatars and statistics
-- Personal best scores tracking
+## 🚀 Quick Start (Lokaal Development)
 
-### 📅 Daily Challenges
-- Submit daily challenge scores
-- Track progress over time
-- Compete with other players
+### Benodigdheden
+- Node.js 18+
+- Bun (npm alternatief, sneller)
+- SQLite (voor lokale ontwikkeling)
 
-### 📊 Leaderboards
-- Today's rankings
-- Weekly leaderboards
-- All-time overall standings
-
-### 🎮 Training Games
-- Multiple training games with instructions:
-  - Around the Clock
-  - Cricket
-  - Killer
-  - Baseball
-  - Shanghai
-  - and more...
-
-### 🎯 Score Tracker
-- 101, 301, 501 game modes
-- Automatic score calculation
-- Bust detection
-- Checkout suggestions
-- Double-out validation
-
-### 👥 Head-to-Head Matches
-- Create matches with other players
-- Turn-based scoring (3 darts per turn)
-- Live scorecard
-- Real-time score updates
-- Multiple game types (301, 501, 701, Cricket)
-
-### ✅ Score Verification
-- Double confirmation system to prevent fraud
-- Dispute mechanism
-- Match status management (IN_PROGRESS, COMPLETED, DISPUTED, CANCELLED)
-
-### 💬 Match Chat
-- In-match messaging between players
-- Message history
-- Typing indicators
-- Real-time updates (with WebSocket service)
-
-### 🔐 User Authentication
-- Secure registration and login
-- Password hashing with bcrypt
-- Session management with NextAuth.js
-- Protected routes
-
-### 📱 Mobile Responsive
-- Works on all device sizes
-- Touch-friendly interface
-- Optimized for mobile gameplay
-
-## ✨ Technology Stack
-
-### 🎯 Core Framework
-- **⚡ Next.js 16** - The React framework for production with App Router
-- **📘 TypeScript 5** - Type-safe JavaScript for better developer experience
-- **🎨 Tailwind CSS 4** - Utility-first CSS framework for rapid UI development
-
-### 🧩 UI Components & Styling
-- **🧩 shadcn/ui** - High-quality, accessible components built on Radix UI
-- **🎯 Lucide React** - Beautiful & consistent icon library
-- **🌈 Framer Motion** - Production-ready motion library for React
-- **🎨 Next Themes** - Perfect dark mode in 2 lines of code
-
-### 📋 Forms & Validation
-- **🎣 React Hook Form** - Performant forms with easy validation
-- **✅ Zod** - TypeScript-first schema validation
-
-### 🔄 State Management & Data Fetching
-- **🐻 Zustand** - Simple, scalable state management
-- **🔄 TanStack Query** - Powerful data synchronization for React
-- **🌐 Fetch** - Promise-based HTTP request
-
-### 🗄️ Database & Backend
-- **🗄️ Prisma** - Next-generation TypeScript ORM
-- **🔐 NextAuth.js** - Complete open-source authentication solution
-- **🐘 PostgreSQL (Supabase)** - Production-ready database hosting
-
-### 🌐 Real-time Features
-- **🔌 Socket.IO** - Real-time bidirectional communication
-- **💬 In-match chat** - Live messaging during matches
-- **📊 Live score updates** - Real-time scorecard updates
-
-## 🚀 Quick Start
-
-### Prerequisites
-- Node.js 18+ or Bun
-- A Supabase account (for database)
-- A Vercel account (for deployment)
-
-### Local Development
+### Installatie
 
 ```bash
-# Clone the repository
-git clone https://github.com/your-username/marimecs-darts.git
-cd marimecs-darts
-
-# Install dependencies
+# Installeer dependencies
 bun install
-# or
-npm install
 
-# Set up environment variables
-cp .env.example .env
-# Edit .env with your Supabase credentials
+# Push database schema
+bun run db:push
 
-# Set up the database
-# 1. Create a project in Supabase
-# 2. Run the setup-database.sql script in Supabase SQL Editor
-# 3. Update DATABASE_URL in .env
-
-# Generate Prisma client
-bun run db:generate
+# (Optioneel) Voeg test data toe
+bun run db:seed
 
 # Start development server
 bun run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) to see your application running.
+Open [http://localhost:3000](http://localhost:3000) in je browser.
 
-## 🌐 Deployment
-
-### Deploy to Vercel
-
-1. **Push code to GitHub**
-   ```bash
-   git add .
-   git commit -m "Initial commit"
-   git push origin main
-   ```
-
-2. **Import in Vercel**
-   - Go to [vercel.com](https://vercel.com)
-   - Click "Add New" → "Project"
-   - Import your GitHub repository
-
-3. **Configure Environment Variables**
-   In Vercel Settings → Environment Variables, add:
-   - `DATABASE_URL` - Your Supabase connection string
-   - `NEXTAUTH_SECRET` - Generate with `openssl rand -base64 32`
-   - `NEXTAUTH_URL` - Your Vercel domain
-
-4. **Deploy**
-   - Click "Deploy"
-   - Wait for the build to complete
-
-For detailed deployment instructions, see [GITHUB_DEPLOY_GUIDE.md](./GITHUB_DEPLOY_GUIDE.md)
-
-## 📁 Project Structure
+## 📁 Project Structuur
 
 ```
-src/
-├── app/                      # Next.js App Router pages
-│   ├── api/                 # API routes
-│   │   ├── auth/            # Authentication endpoints
-│   │   ├── matches/         # Match management APIs
-│   │   ├── scores/          # Score tracking APIs
-│   │   ├── players/         # Player management APIs
-│   │   └── challenges/      # Daily challenge APIs
-│   ├── dashboard/           # Main dashboard page
-│   ├── matches/             # Match pages
-│   ├── login/               # Login page
-│   └── register/            # Registration page
-├── components/              # Reusable React components
-│   └── ui/                 # shadcn/ui components
-├── hooks/                   # Custom React hooks
-├── lib/                     # Utility functions
-│   ├── db.ts               # Prisma client
-│   └── utils.ts            # Utility functions
-├── config/                  # Configuration files
-└── types/                   # TypeScript type definitions
-
-mini-services/
-├── match-service/           # WebSocket service for matches
-└── darts-ws/               # General WebSocket service
-
-prisma/
-├── schema.prisma           # Database schema
-└── schema.postgres.prisma  # PostgreSQL-specific schema
-
-public/                      # Static assets
-└── marimecs-logo.png       # App logo
+my-project/
+├── src/
+│   ├── app/                    # Next.js App Router pagina's
+│   │   ├── page.tsx           # Homepage
+│   │   ├── scoreboard/         # Scoreteller
+│   │   ├── challenges/         # Challenges
+│   │   ├── training/          # Training
+│   │   ├── leaderboard/        # Leaderboards
+│   │   ├── settings/          # Instellingen
+│   │   ├── login/             # Login
+│   │   └── register/          # Registratie
+│   ├── components/
+│   │   ├── darts-keypad.tsx   # Darts score invoer
+│   │   ├── number-keypad.tsx  # Nummeriek toetsenbord
+│   │   ├── mobile-nav.tsx     # Mobiele navigatie
+│   │   └── ui/                # shadcn/ui componenten
+│   ├── contexts/
+│   │   └── settings-context.tsx  # Global settings
+│   ├── lib/
+│   │   └── db.ts              # Prisma client
+│   └── app/
+│       └── globals.css        # Global styles
+├── prisma/
+│   ├── schema.prisma          # Database schema
+│   └── seed.ts               # Test data
+├── db/                        # SQLite database bestanden
+└── public/                    # Statische bestanden
 ```
 
-## 🎨 Available Pages & Features
+## 🎮 Scoreteller Features
 
-### Main Pages
-- **Home** - Landing page with app overview
-- **Dashboard** - Main hub with challenges, leaderboards, and matches
-- **Login/Register** - User authentication
-- **Match Detail** - Live match with scoring and chat
+### Invoermethoden
+1. **Per Dart** - D/T/SB/DB modifiers met nummers 1-20
+2. **3 Darts + Bevestig** - 3 scores invoeren en bevestigen
+3. **Directe Score** - 0-9 nummeriek toetsenbord
 
-### Training Games
-- Around the Clock
-- Cricket
-- Killer
-- Baseball
-- Shanghai
-- 180 Practice
-- Checkout Practice
+### Ondersteunde Spelletjes
+- **501** - Klassiek darts spel
+- **301** - Snellere variant
+- **Cricket** - Cricket regels
 
-### Dashboard Sections
-- Daily Challenges - Submit and track daily scores
-- Leaderboards - Today, weekly, and overall rankings
-- Active Matches - View and join matches
-- Create Match - Start a new match with another player
-- Player List - View all registered players
+### Features
+- ✅ Check-out suggesties voor scores ≤ 170
+- ✅ Bust detectie (score onder 0)
+- ✅ Resterende score berekening
+- ✅ Darts statistieken per speler
+- ✅ Gemiddelde per 3 darts
 
-## 🔐 Authentication
+## 🏆 Leaderboard & Challenges
 
-The app uses NextAuth.js for secure authentication:
-- Email/password registration
-- Password hashing with bcrypt
-- JWT session strategy
-- Protected routes for authenticated users
+- **Weekelijkse rankings** - Per week competities
+- **Overall rankings** - Alle tijd
+- **Dagelijkse challenges** - Nieuwe games elke dag
+- **Groep system** - Maak groepen voor collega's
+- **Invite codes** - Nodig collega's eenvoudig uit
+
+## 🎨 Personalisatie
+
+Log in om aan te passen:
+- **Accentkleuren** - 8 kleuropties (emerald, blue, purple, rose, amber, orange, teal, slate)
+- **Logo** - Upload je bedrijfslogo (JPG, PNG, GIF, WebP - max 2MB)
+- **App Naam** - Pas de naam van de app aan (bijv. "Bedrijfs Darts")
+
+## 📱 Responsive Design
+
+- **Mobile-First** - Geoptimaliseerd voor smartphones
+- **Sticky Bottom Nav** - Snelle toegang tot alle features
+- **Compact UI** - Kleinere fonts en padding voor mobile
+- **Touch-Friendly** - Grote knoppen (min 44px)
+
+## 🔐 Authenticatie
+
+- **Email Registratie** met verificatie
+- **Wachtwoord Hashing** met bcrypt
+- **Sessie Management** met JWT tokens
+- **Group Invitation** met unieke codes
 
 ## 🗄️ Database Schema
 
-The app uses Prisma ORM with PostgreSQL (Supabase):
-- **User** - User accounts and authentication
-- **Account** - OAuth account linking
-- **Session** - User sessions
-- **Player** - Player profiles and statistics
-- **Challenge** - Daily challenges
-- **Score** - Player scores
-- **Match** - Head-to-head matches
-- **MatchTurn** - Individual turns in matches
-- **MatchMessage** - Match chat messages
-- **ScoreConfirmation** - Match score confirmations
-- **SiteSettings** - App settings and logo
+### Modellen
+- **User** - Spelers met personalisatie
+- **Group** - Competitie groepen
+- **GroupMember** - Groep lidmaatschappen
+- **Invitation** - Uitnodigingen
+- **Challenge** - Dagelijkse challenges
+- **ChallengeScore** - Challenge scores
+- **Match** - Wedstrijden
+- **MatchScore** - Wedstrijd scores
+- **Training** - Training oefeningen
+- **TrainingProgress** - Training voortgang
 
-See `prisma/schema.prisma` for complete schema definition.
+## 🚀 Deployment
 
-## 🧪 Testing
+### Vercel (Aanbevolwen)
+
+Zie `DEPLOYMENT.md` voor gedetailleerde instructies.
+
+**Korte versie:**
+1. Maak een GitHub repository
+2. Push je code
+3. Import in Vercel
+4. Voeg environment variables toe (DATABASE_URL, NEXTAUTH_SECRET)
+5. Deploy!
+
+**Belangrijk:** Voor Vercel moet je PostgreSQL gebruiken (SQLite werkt niet in de cloud).
+
+### Alternatieven
+- **Railway** - Volledige PostgreSQL integratie
+- **Render** - PostgreSQL + eenvoudige deployment
+- **Docker** - Volledige controle
+
+## 🔧 Development
 
 ```bash
-# Run linting
+# Run development server
+bun run dev
+
+# Type check
 bun run lint
 
-# Test database connection
-# Visit: http://localhost:3000/api/health
+# Database migrations
+bun run db:push
+bun run db:generate
+bun run db:migrate
+
+# Reset database
+bun run db:reset
 ```
 
-## 📝 Scripts
+## 📝 API Endpoints
 
-```bash
-bun run dev          # Start development server
-bun run build        # Build for production
-bun run start        # Start production server
-bun run lint         # Run ESLint
-bun run db:push      # Push schema changes to database
-bun run db:generate  # Generate Prisma client
-bun run db:migrate   # Create and apply migrations
-bun run db:reset     # Reset database
-```
+### Authentication
+- `POST /api/auth/register` - Registreren
+- `POST /api/auth/login` - Inloggen
+- `GET /api/auth/verify?token=xxx` - Email verifiëren
 
-## 🔒 Security
+### Challenges
+- `GET /api/challenges` - Alle challenges
+- `POST /api/challenges` - Challenge aanmaken (admin)
 
-- Environment variables for sensitive data (use `.env.example` as template)
-- Password hashing with bcrypt
-- NextAuth.js for secure authentication
-- SQL injection prevention with Prisma ORM
-- XSS protection with React's built-in escaping
+### Leaderboard
+- `GET /api/leaderboard?period=weekly` - Weekelijkse ranking
+- `GET /api/leaderboard?period=overall` - Overall ranking
 
-## 🌟 Future Enhancements
+### Groups
+- `GET /api/groups` - Jouw groepen
+- `POST /api/groups` - Nieuwe groep maken
+- `POST /api/groups/invite` - Uitnodiging aanmaken
 
-- [ ] Push notifications for match invitations
-- [ ] Advanced statistics and analytics
-- [ ] Tournament mode
-- [ ] Video tutorials for training games
-- [ ] Social features (friends, following)
-- [ ] More game modes
+### Settings
+- `GET /api/settings` - Jouw instellingen
+- `PUT /api/settings` - Instellingen bijwerken
+- `POST /api/settings/logo` - Logo uploaden
+
+## 🎨 Kleuren Schema
+
+De app gebruikt 8 accentkleuren:
+
+| Kleur | Naam | Tailwind Classes |
+|-------|------|-----------------|
+| 🟢 Emerald | Emerald | `bg-emerald-600` |
+| 🔵 Blue | Blue | `bg-blue-600` |
+| 🟣 Purple | Purple | `bg-purple-600` |
+| 🔴 Rose | Rose | `bg-rose-600` |
+| 🟡 Amber | Amber | `bg-amber-600` |
+| 🟠 Orange | Orange | `bg-orange-600` |
+| 🔷 Teal | Teal | `bg-teal-600` |
+| ⚫ Slate | Slate | `bg-slate-600` |
 
 ## 📄 License
 
-This project is private and proprietary to Marimecs.
+MIT License - zie LICENSE bestand voor details
 
-## 🤝 Contributing
+## 🤝 Contributen
 
-This is an internal project. Please contact the project maintainers before making changes.
+Contributies zijn welkom! Maak een pull request of open een issue.
 
 ## 📞 Support
 
-For issues or questions, please contact the development team.
+Voor vragen of problemen, maak een issue aan op GitHub.
 
 ---
 
-Built with ❤️ for darts enthusiasts. Powered by [Next.js](https://nextjs.org), [Prisma](https://www.prisma.io), and [Supabase](https://supabase.com). 🎯
+Gemaakt met ❤️ voor darts enthusiasts door het DartsPro team.

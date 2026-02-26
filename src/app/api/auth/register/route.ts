@@ -1,66 +1,91 @@
-import { NextResponse } from "next/server"
-import { db } from "@/lib/db"
-import bcrypt from "bcryptjs"
+import { NextRequest, NextResponse } from 'next/server';
+import { db } from '@/lib/db';
+import { hash } from 'bcryptjs';
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   try {
-    const body = await request.json()
-    const { name, email, password } = body
+    const { name, email, password, inviteCode } = await request.json();
 
+    // Validate input
     if (!name || !email || !password) {
       return NextResponse.json(
-        { error: "Alle velden zijn verplicht" },
+        { error: 'Naam, e-mail en wachtwoord zijn verplicht' },
         { status: 400 }
-      )
+      );
     }
 
     // Check if user already exists
     const existingUser = await db.user.findUnique({
-      where: { email: email.toLowerCase() }
-    })
+      where: { email }
+    });
 
     if (existingUser) {
       return NextResponse.json(
-        { error: "Email is al in gebruik" },
-        { status: 409 }
-      )
+        { error: 'Er bestaat al een account met dit e-mailadres' },
+        { status: 400 }
+      );
     }
 
     // Hash password
-    const hashedPassword = await bcrypt.hash(password, 12)
+    const hashedPassword = await hash(password, 10);
+
+    // Generate verification token
+    const verificationToken = Math.random().toString(36).substring(2, 15) +
+                              Math.random().toString(36).substring(2, 15);
 
     // Create user
     const user = await db.user.create({
       data: {
         name,
-        email: email.toLowerCase(),
+        email,
         password: hashedPassword,
-        emailVerified: new Date(), // Auto-verify for now (can add email verification later)
-        initials: name
-          .split(" ")
-          .map(n => n[0])
-          .join("")
-          .toUpperCase()
-          .substring(0, 3),
+        verificationToken,
+        verified: false
       }
-    })
+    });
 
-    return NextResponse.json(
-      {
-        message: "Registratie succesvol!",
-        user: {
-          id: user.id,
-          name: user.name,
-          email: user.email,
-        },
+    // If invite code provided, check if valid and add to group
+    let group = null;
+    if (inviteCode) {
+      group = await db.group.findUnique({
+        where: { code: inviteCode }
+      });
+
+      if (group) {
+        // Add user to group
+        await db.groupMember.create({
+          data: {
+            userId: user.id,
+            groupId: group.id,
+            role: 'member'
+          }
+        });
+      }
+    }
+
+    // In a real application, send verification email here
+    // For now, we'll log it
+    console.log('Verification link would be:', `/api/auth/verify?token=${verificationToken}&email=${email}`);
+
+    return NextResponse.json({
+      success: true,
+      message: 'Registratie succesvol. Controleer je e-mail voor bevestiging.',
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email
       },
-      { status: 201 }
-    )
+      group: group ? {
+        id: group.id,
+        name: group.name
+      } : null
+    });
+
   } catch (error) {
-    console.error("Registration error:", error)
+    console.error('Registration error:', error);
     return NextResponse.json(
-      { error: "Registratie mislukt" },
+      { error: 'Er ging iets mis bij het registreren' },
       { status: 500 }
-    )
+    );
   }
 }

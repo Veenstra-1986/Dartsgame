@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
-import { Providers } from "@/components/providers";
+import { SettingsProvider } from "@/contexts/settings-context";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -15,22 +15,19 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Marimecs Dart Club - Trainen, Competities en Matches",
-  description: "Marimecs Dart Club: Volg je scores, daag vrienden uit, en verbeter je darts spel met dagelijkse challenges, training games en head-to-head matches.",
-  keywords: ["Marimecs", "Darts", "Training", "Challenges", "Matches", "Leaderboard", "501", "Cricket"],
-  authors: [{ name: "Marimecs" }],
+  title: "DartsPro - Company Darts Competition App",
+  description: "Modern darts competition platform for companies with daily challenges, leaderboards, and training tools",
+  keywords: ["Darts", "Company Darts", "Competition", "Leaderboard", "Training", "501", "301", "Cricket"],
+  authors: [{ name: "DartsPro Team" }],
   icons: {
-    icon: "/marimecs-logo.png",
+    icon: "https://z-cdn.chatglm.cn/z-ai/static/logo.svg",
   },
   openGraph: {
-    title: "Marimecs Dart Club",
-    description: "Trainen, Competities en Matches - Verbeter je darts spel!",
+    title: "DartsPro - Company Darts Competition App",
+    description: "AI-powered darts platform with modern features",
+    url: "https://dartspro.app",
+    siteName: "DartsPro",
     type: "website",
-  },
-  twitter: {
-    card: "summary_large_image",
-    title: "Marimecs Dart Club",
-    description: "Volg je scores, daag vrienden uit en verbeter je spel!",
   },
 };
 
@@ -44,10 +41,10 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-background text-foreground`}
       >
-        <Providers>
+        <SettingsProvider>
           {children}
           <Toaster />
-        </Providers>
+        </SettingsProvider>
       </body>
     </html>
   );
