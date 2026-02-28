@@ -4,6 +4,7 @@ import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { Home, Target, Menu, X, Trophy, BookOpen, Settings, LogOut } from 'lucide-react';
 import { useState } from 'react';
+import { useSettings } from '@/contexts/settings-context';
 
 const navItems = [
   { href: '/', label: 'Home', icon: Home },
@@ -15,6 +16,36 @@ const navItems = [
 export function MobileNav() {
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
+  const { preferences } = useSettings();
+  const accentColor = preferences.accentColor || 'emerald';
+
+  const getAccentColorClass = (color: string) => {
+    const colors: Record<string, string> = {
+      emerald: 'bg-emerald-600',
+      blue: 'bg-blue-600',
+      purple: 'bg-purple-600',
+      rose: 'bg-rose-600',
+      amber: 'bg-amber-600',
+      orange: 'bg-orange-600',
+      teal: 'bg-teal-600',
+      slate: 'bg-slate-600',
+    };
+    return colors[color] || 'bg-emerald-600';
+  };
+
+  const getAccentTextColor = (color: string) => {
+    const colors: Record<string, string> = {
+      emerald: 'text-emerald-600',
+      blue: 'text-blue-600',
+      purple: 'text-purple-600',
+      rose: 'text-rose-600',
+      amber: 'text-amber-600',
+      orange: 'text-orange-600',
+      teal: 'text-teal-600',
+      slate: 'text-slate-600',
+    };
+    return colors[color] || 'text-emerald-600';
+  };
 
   return (
     <>
@@ -35,7 +66,7 @@ export function MobileNav() {
               onClick={() => setMenuOpen(false)}
               className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-slate-100 transition-colors"
             >
-              <Trophy className="h-5 w-5 text-amber-600" />
+              <Trophy className="h-5 w-5" style={{ color: getAccentTextColor(accentColor) }} />
               <span className="font-medium">Leaderboard</span>
             </Link>
             <Link
@@ -57,7 +88,8 @@ export function MobileNav() {
             <Link
               href="/register"
               onClick={() => setMenuOpen(false)}
-              className="flex items-center gap-3 px-4 py-3 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 transition-colors"
+              className="flex items-center gap-3 px-4 py-3 rounded-lg text-white hover:opacity-90 transition-colors"
+              style={{ backgroundColor: getAccentColorClass(accentColor) }}
             >
               <span className="font-medium">Registreren</span>
             </Link>
@@ -65,9 +97,9 @@ export function MobileNav() {
         </div>
       )}
 
-      {/* Bottom Navigation Bar */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 z-50 md:hidden safe-area-bottom">
-        <div className="flex items-center justify-around h-16">
+      {/* Bottom Navigation Bar - Visible on both mobile and desktop */}
+      <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 z-50 safe-area-bottom">
+        <div className="flex items-center justify-around h-16 max-w-4xl mx-auto">
           {navItems.map((item) => {
             const Icon = item.icon;
             const isActive = pathname === item.href;
@@ -77,10 +109,10 @@ export function MobileNav() {
                 key={item.href}
                 href={item.href}
                 className={`flex flex-col items-center justify-center w-full h-full transition-colors ${
-                  isActive ? 'text-emerald-600' : 'text-slate-600'
+                  isActive ? getAccentTextColor(accentColor) : 'text-slate-600'
                 }`}
               >
-                <Icon className={`h-5 w-5 ${isActive ? 'text-emerald-600' : 'text-slate-400'}`} />
+                <Icon className={`h-5 w-5 ${isActive ? getAccentTextColor(accentColor) : 'text-slate-400'}`} />
                 <span className="text-[10px] mt-1 font-medium">{item.label}</span>
               </Link>
             );
@@ -90,17 +122,17 @@ export function MobileNav() {
           <button
             onClick={() => setMenuOpen(!menuOpen)}
             className={`flex flex-col items-center justify-center w-full h-full transition-colors ${
-              menuOpen ? 'text-emerald-600' : 'text-slate-600'
+              menuOpen ? getAccentTextColor(accentColor) : 'text-slate-600'
             }`}
           >
-            <Menu className="h-5 w-5 text-slate-400" />
+            <Menu className={`h-5 w-5 ${menuOpen ? getAccentTextColor(accentColor) : 'text-slate-400'}`} />
             <span className="text-[10px] mt-1 font-medium">Menu</span>
           </button>
         </div>
       </nav>
 
       {/* Spacer for bottom nav */}
-      <div className="h-16 md:hidden" />
+      <div className="h-16" />
     </>
   );
 }
