@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Target, RotateCcw, Check, Eraser, TrendingUp, Trophy, Play } from 'lucide-react';
+import { Target, RotateCcw, Check, Eraser, TrendingUp, Trophy, Play, Edit2, ChevronDown, ChevronUp, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -10,7 +10,11 @@ import { DartsKeypad } from '@/components/darts-keypad';
 import { NumberKeypad } from '@/components/number-keypad';
 import { MobileNav } from '@/components/mobile-nav';
 import { useSettings } from '@/contexts/settings-context';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import Link from 'next/link';
+import { useToast } from '@/hooks/use-toast';
 
 type GameType = '501' | '301' | 'Cricket';
 type InputMethod = 'per-dart' | '3-darts' | 'direct';
@@ -27,6 +31,7 @@ type Player = {
 export default function ScoreboardPage() {
   const { preferences } = useSettings();
   const accentColor = preferences.accentColor || 'emerald';
+  const { toast } = useToast();
 
   const [gameType, setGameType] = useState<GameType>('501');
   const [inputMethod, setInputMethod] = useState<InputMethod>('per-dart');
@@ -38,6 +43,9 @@ export default function ScoreboardPage() {
   const [message, setMessage] = useState('');
   const [checkOut, setCheckOut] = useState<string[]>([]);
   const [roundScore, setRoundScore] = useState('');
+  const [expandedStats, setExpandedStats] = useState<Record<string, boolean>>({});
+  const [editNameDialog, setEditNameDialog] = useState<{ open: boolean; playerId: string | null; name: string }>({ open: false, playerId: null, name: '' });
+  const [editScoreDialog, setEditScoreDialog] = useState<{ open: boolean; playerId: string | null; roundIndex: number | null; dartIndex: number | null; value: string }>({ open: false, playerId: null, roundIndex: null, dartIndex: null, value: '' });
 
   // Helper functions for accent colors
   const getAccentColorClass = (color: string) => {
@@ -119,6 +127,7 @@ export default function ScoreboardPage() {
     setMessage('');
     setCheckOut([]);
     setRoundScore('');
+    setExpandedStats({});
   }, [gameType]);
 
   // Reset current round when input method changes
@@ -303,15 +312,99 @@ export default function ScoreboardPage() {
     setMessage('');
     setCheckOut([]);
     setRoundScore('');
+    setExpandedStats({});
+  };
+
+  const handleEditPlayerName = () => {
+    if (!editNameDialog.playerId || !editNameDialog.name.trim()) {
+      toast({
+        variant: 'destructive',
+        title: 'Fout',
+        description: 'Voer een geldige naam in'
+      });
+      return;
+    }
+
+    const newPlayers = [...players];
+    const player = newPlayers.find(p => p.id === editNameDialog.playerId);
+    if (player) {
+      player.name = editNameDialog.name;
+      setPlayers(newPlayers);
+      toast({
+        title: 'Naam gewijzigd',
+        description: `Speler heet nu ${player.name}`
+      });
+    }
+    setEditNameDialog({ open: false, playerId: null, name: '' });
+  };
+
+  const handleEditScore = () => {
+    if (!editScoreDialog.playerId || editScoreDialog.roundIndex === null) return;
+
+    const newScore = parseInt(editScoreDialog.value);
+    if (isNaN(newScore) || newScore < 0 || newScore > 180) {
+      toast({
+        variant: 'destructive',
+        title: 'Ongeldige score',
+        description: 'Voer een score tussen 0 en 180 in'
+      });
+      return;
+    }
+
+    const newPlayers = [...players];
+    const player = newPlayers.find(p => p.id === editScoreDialog.playerId);
+
+    if (player && editScoreDialog.roundIndex !== null && player.history[editScoreDialog.roundIndex]) {
+      if (editScoreDialog.dartIndex !== null && editScoreDialog.dartIndex !== -1) {
+        // Edit single dart in a round
+        const oldScore = player.history[editScoreDialog.roundIndex][editScoreDialog.dartIndex];
+        player.history[editScoreDialog.roundIndex][editScoreDialog.dartIndex] = newScore;
+        const roundDiff = newScore - oldScore;
+        player.score -= roundDiff;
+      } else if (editScoreDialog.dartIndex === -1) {
+        // Edit total round score
+        const oldTotal = player.history[editScoreDialog.roundIndex].reduce((a, b) => a + b, 0);
+        const diff = newScore - oldTotal;
+        player.score -= diff;
+        // Distribute the difference across darts
+        const numDarts = player.history[editScoreDialog.roundIndex].length;
+        for (let i = 0; i < numDarts; i++) {
+          player.history[editScoreDialog.roundIndex][i] = Math.floor(newScore / numDarts);
+        }
+        // Add remainder to first dart
+        player.history[editScoreDialog.roundIndex][0] += newScore % numDarts;
+      }
+      setPlayers(newPlayers);
+      toast({
+        title: 'Score gewijzigd',
+        description: 'De score is succesvol aangepast'
+      });
+    }
+    setEditScoreDialog({ open: false, playerId: null, roundIndex: null, dartIndex: null, value: '' });
+  };
+
+  const getPlayerStats = (player: Player) => {
+    const highest = player.history.length > 0
+      ? Math.max(...player.history.map(h => h.reduce((a, b) => a + b, 0)))
+      : 0;
+    const average = player.history.length > 0 && player.darts > 0
+      ? Math.round(
+          player.history.reduce((a, b) => a + b.reduce((x, y) => x + y, 0), 0) /
+          player.darts * 3
+        )
+      : 0;
+    const rounds = player.history.length;
+
+    return { highest, average, rounds };
   };
 
   const currentPlayer = players[currentPlayerIndex];
   const gameFinished = players.some(p => p.finished);
 
   return (
-    <div className="min-h-screen flex flex-col bg-gradient-to-b from-slate-50 to-slate-100">
+    <div className="min-h-screen flex flex-col bg-gradient-to-b from-slate-50 to-slate-100 dark:from-slate-950 dark:to-slate-900">
       {/* Header */}
-      <header className="sticky top-0 z-50 w-full border-b bg-white/80 backdrop-blur-sm">
+      <header className="sticky top-0 z-50 w-full border-b bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm">
         <div className="container mx-auto px-4 py-3">
           <div className="flex items-center justify-between">
             <Link href="/" className="flex items-center gap-2">
@@ -319,7 +412,7 @@ export default function ScoreboardPage() {
                 <Target className="h-4 w-4 text-white" />
               </div>
               <div>
-                <h1 className="text-lg font-bold text-slate-900 leading-tight">
+                <h1 className="text-lg font-bold text-slate-900 dark:text-white leading-tight">
                   {preferences.groupName || 'DartsPro'}
                 </h1>
                 <Badge variant="secondary" className="text-[10px] px-1 py-0" style={{ backgroundColor: getAccentColorClassWithOpacity(accentColor), color: getAccentTextColor(accentColor) }}>
@@ -363,10 +456,10 @@ export default function ScoreboardPage() {
                     </SelectContent>
                   </Select>
                 </div>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={resetGame} 
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={resetGame}
                   className="h-8 px-3 text-xs"
                 >
                   <RotateCcw className="h-3 w-3 mr-1" />
@@ -376,121 +469,167 @@ export default function ScoreboardPage() {
             </CardContent>
           </Card>
 
-          {/* Scoreboard Cards */}
-          <div className="grid md:grid-cols-2 gap-3">
-            {players.map((player, index) => (
-              <Card
-                key={player.id}
-                className={`transition-all ${
-                  index === currentPlayerIndex && !gameFinished
-                    ? 'border-2 shadow-lg'
-                    : player.finished
-                    ? 'border-2 border-amber-400 bg-amber-50/50'
-                    : 'border border-slate-200'
-                }`}
-                style={{
-                  borderColor: index === currentPlayerIndex && !gameFinished 
-                    ? getAccentColorClass(accentColor) 
-                    : undefined
-                }}
-              >
-                <CardHeader className="pb-2 px-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex-1">
-                      <p className="text-xs text-slate-500 mb-1">{player.name}</p>
-                      <CardTitle 
-                        className={`text-4xl font-bold ${
-                          index === currentPlayerIndex && !gameFinished
-                            ? getAccentTextColor(accentColor)
-                            : 'text-slate-900'
-                        }`}
-                      >
-                        {player.score}
-                      </CardTitle>
-                    </div>
-                    {index === currentPlayerIndex && !gameFinished && (
-                      <Badge 
-                        className="animate-pulse text-white"
-                        style={{ backgroundColor: getAccentColorClass(accentColor) }}
-                      >
-                        <Play className="h-3 w-3 mr-1" />
-                        Aan beurt
-                      </Badge>
-                    )}
-                    {player.finished && (
-                      <Badge className="text-white"
-                        style={{ backgroundColor: getAccentColorClass(accentColor) }}>
-                        <Trophy className="h-3 w-3 mr-1" />
-                        Gewonnen
-                      </Badge>
-                    )}
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-2 px-4">
-                  <div className="grid grid-cols-3 gap-2 text-center py-2 bg-slate-50 rounded-lg">
-                    <div>
-                      <span className="text-[10px] text-slate-500 block">Darts</span>
-                      <span className="font-bold text-sm">{player.darts}</span>
-                    </div>
-                    <div>
-                      <span className="text-[10px] text-slate-500 block">Hoogste</span>
-                      <span className="font-bold text-sm">
-                        {player.history.length > 0
-                          ? Math.max(...player.history.map(h => h.reduce((a, b) => a + b, 0)))
-                          : 0}
-                      </span>
-                    </div>
-                    <div>
-                      <span className="text-[10px] text-slate-500 block">Gem/3</span>
-                      <span className="font-bold text-sm">
-                        {player.history.length > 0
-                          ? Math.round(
-                              player.history.reduce((a, b) => a + b.reduce((x, y) => x + y, 0), 0) /
-                              player.darts * 3
-                            )
-                          : 0}
-                      </span>
-                    </div>
-                  </div>
-                  {player.currentDarts.length > 0 && index === currentPlayerIndex && (
-                    <div className="py-2 px-3 rounded-lg" style={{ backgroundColor: getAccentColorClassWithOpacity(accentColor, 0.15) }}>
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-medium" style={{ color: getAccentTextColor(accentColor) }}>
-                          Huidige beurt
-                        </span>
-                        <span className="text-lg font-bold" style={{ color: getAccentTextColor(accentColor) }}>
-                          {player.currentDarts.reduce((a, b) => a + b, 0)}
-                        </span>
-                      </div>
-                      <div className="flex gap-1 mt-2">
-                        {player.currentDarts.map((score, i) => (
-                          <Badge 
-                            key={i} 
-                            variant="secondary" 
-                            className={`text-xs px-2 py-0.5 bg-white ${getAccentTextColor(accentColor)}`}
+          {/* Compact Scoreboard - Side by Side */}
+          <div className="grid grid-cols-2 gap-2">
+            {players.map((player, index) => {
+              const isCurrentPlayer = index === currentPlayerIndex && !gameFinished;
+              const stats = getPlayerStats(player);
+              const isExpanded = expandedStats[player.id];
+
+              return (
+                <Card
+                  key={player.id}
+                  className={`relative transition-all ${
+                    isCurrentPlayer
+                      ? 'border-3 shadow-xl scale-105 z-10'
+                      : player.finished
+                      ? 'border-2 border-amber-400 bg-amber-50/50 dark:bg-amber-950/20'
+                      : 'border border-slate-200 dark:border-slate-800'
+                  }`}
+                  style={{
+                    borderColor: isCurrentPlayer ? getAccentColorClass(accentColor) : undefined,
+                    minHeight: isCurrentPlayer ? 'auto' : undefined
+                  }}
+                >
+                  {/* Player Header with Edit Name */}
+                  <CardHeader className={`pb-2 px-3 ${isCurrentPlayer ? 'pt-4' : 'pt-3'}`}>
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <p className={`font-bold truncate ${isCurrentPlayer ? 'text-base' : 'text-sm'}`}>
+                            {player.name}
+                          </p>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-5 w-5 p-0 flex-shrink-0"
+                            onClick={() => setEditNameDialog({ open: true, playerId: player.id, name: player.name })}
                           >
-                            {score}
+                            <Edit2 className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      </div>
+                      <div className="flex flex-col items-end gap-1 flex-shrink-0">
+                        <CardTitle
+                          className={`font-bold ${isCurrentPlayer ? 'text-5xl' : 'text-3xl'} leading-none ${
+                            isCurrentPlayer
+                              ? getAccentTextColor(accentColor)
+                              : 'text-slate-900 dark:text-white'
+                          }`}
+                        >
+                          {player.score}
+                        </CardTitle>
+                        {isCurrentPlayer && (
+                          <Badge className="animate-pulse text-white text-[10px]" style={{ backgroundColor: getAccentColorClass(accentColor) }}>
+                            <Play className="h-2 w-2 mr-1" />
+                            Aan beurt
                           </Badge>
-                        ))}
+                        )}
+                        {player.finished && (
+                          <Badge className="bg-amber-500 text-white text-[10px]">
+                            <Trophy className="h-2 w-2 mr-1" />
+                            Gewonnen
+                          </Badge>
+                        )}
                       </div>
                     </div>
-                  )}
-                  <div>
-                    <span className="text-[10px] text-slate-500">Laatste worpen:</span>
-                    <div className="text-xs mt-1 space-y-1">
-                      {player.history.slice(-3).reverse().map((round, i) => (
-                        <div key={i} className="flex items-center justify-between py-1 border-b border-slate-100 last:border-0">
-                          <span className="text-slate-600">{formatDartScores(round)}</span>
-                          <span className="font-semibold" style={{ color: getAccentTextColor(accentColor) }}>
-                            {round.reduce((a, b) => a + b, 0)}
+                  </CardHeader>
+
+                  <CardContent className="space-y-2 px-3 pb-3">
+                    {/* Expandable Stats */}
+                    <div className="border rounded-lg overflow-hidden">
+                      <button
+                        onClick={() => setExpandedStats(prev => ({ ...prev, [player.id]: !prev[player.id] }))}
+                        className="w-full p-2 flex items-center justify-between text-xs hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+                      >
+                        <span className="text-slate-600 dark:text-slate-400 font-medium">Statistieken</span>
+                        {isExpanded ? <ChevronUp className="h-3 w-3 text-slate-400" /> : <ChevronDown className="h-3 w-3 text-slate-400" />}
+                      </button>
+                      {isExpanded && (
+                        <div className="grid grid-cols-3 gap-2 text-center py-2 px-2 bg-slate-50 dark:bg-slate-800/50 border-t">
+                          <div>
+                            <span className="text-[10px] text-slate-500 dark:text-slate-400 block">Darts</span>
+                            <span className="font-bold text-sm text-slate-900 dark:text-white">{player.darts}</span>
+                          </div>
+                          <div>
+                            <span className="text-[10px] text-slate-500 dark:text-slate-400 block">Hoogste</span>
+                            <span className="font-bold text-sm text-slate-900 dark:text-white">{stats.highest}</span>
+                          </div>
+                          <div>
+                            <span className="text-[10px] text-slate-500 dark:text-slate-400 block">Gem/3</span>
+                            <span className="font-bold text-sm text-slate-900 dark:text-white">{stats.average}</span>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Current Turn - Active Player Only */}
+                    {isCurrentPlayer && player.currentDarts.length > 0 && (
+                      <div className="py-2 px-3 rounded-lg" style={{ backgroundColor: getAccentColorClassWithOpacity(accentColor, 0.15) }}>
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-medium" style={{ color: getAccentTextColor(accentColor) }}>
+                            Huidige beurt
+                          </span>
+                          <span className={`font-bold ${isCurrentPlayer ? 'text-xl' : 'text-lg'}`} style={{ color: getAccentTextColor(accentColor) }}>
+                            {player.currentDarts.reduce((a, b) => a + b, 0)}
                           </span>
                         </div>
-                      ))}
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+                        <div className="flex gap-1 mt-2">
+                          {player.currentDarts.map((score, i) => (
+                            <Badge
+                              key={i}
+                              variant="secondary"
+                              className={`text-xs px-2 py-0.5 bg-white dark:bg-slate-800 ${getAccentTextColor(accentColor)}`}
+                            >
+                              {score}
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Recent Throws - Collapsible */}
+                    {player.history.length > 0 && (
+                      <div className="border rounded-lg overflow-hidden">
+                        <button
+                          onClick={() => setExpandedStats(prev => ({ ...prev, [`${player.id}-history`]: !prev[`${player.id}-history`] }))}
+                          className="w-full p-2 flex items-center justify-between text-xs hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+                        >
+                          <span className="text-slate-600 dark:text-slate-400 font-medium">Laatste worpen ({player.history.length})</span>
+                          {expandedStats[`${player.id}-history`] ? <ChevronUp className="h-3 w-3 text-slate-400" /> : <ChevronDown className="h-3 w-3 text-slate-400" />}
+                        </button>
+                        {expandedStats[`${player.id}-history`] && (
+                          <div className="max-h-32 overflow-y-auto p-2 space-y-1 bg-slate-50 dark:bg-slate-800/50 border-t">
+                            {player.history.slice(-10).reverse().map((round, i) => {
+                              const roundIndex = player.history.length - 1 - i;
+                              const roundTotal = round.reduce((a, b) => a + b, 0);
+                              return (
+                                <div key={i} className="flex items-center justify-between py-1 px-2 border-b border-slate-100 dark:border-slate-700 last:border-0 hover:bg-white dark:hover:bg-slate-800 rounded transition-colors">
+                                  <span className="text-xs text-slate-600 dark:text-slate-400">{formatDartScores(round)}</span>
+                                  <div className="flex items-center gap-2">
+                                    <span className={`font-bold ${isCurrentPlayer ? getAccentTextColor(accentColor) : 'text-slate-900 dark:text-white'}`}>
+                                      {roundTotal}
+                                    </span>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="h-5 w-5 p-0 flex-shrink-0"
+                                      onClick={() => setEditScoreDialog({ open: true, playerId: player.id, roundIndex, dartIndex: null, value: roundTotal.toString() })}
+                                    >
+                                      <Edit2 className="h-3 w-3" />
+                                    </Button>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              );
+            })}
           </div>
 
           {/* Score Input Section */}
@@ -536,10 +675,10 @@ export default function ScoreboardPage() {
                 {message && (
                   <div className={`p-3 rounded-lg text-center text-sm font-medium ${
                     message.includes('busten') || message.includes('Ongeldige') || message.includes('fout')
-                      ? 'bg-red-50 text-red-700 border border-red-200'
+                      ? 'bg-red-50 text-red-700 border border-red-200 dark:bg-red-950/20 dark:text-red-400 dark:border-red-900'
                       : message.includes('gewonnen') || message.includes('🎉')
-                      ? 'bg-amber-50 text-amber-700 border border-amber-200'
-                      : 'bg-slate-100 text-slate-900'
+                      ? 'bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-950/20 dark:text-amber-400 dark:border-amber-900'
+                      : 'bg-slate-100 text-slate-900 dark:bg-slate-800 dark:text-white'
                   }`}>
                     {message}
                   </div>
@@ -547,11 +686,10 @@ export default function ScoreboardPage() {
 
                 {/* Current Round Info */}
                 {currentPlayer.currentDarts.length > 0 && (
-                  <div className="p-3 rounded-lg border-2"
-                    style={{
-                      backgroundColor: getAccentColorClassWithOpacity(accentColor, 0.1),
-                      borderColor: getAccentColorClass(accentColor)
-                    }}>
+                  <div className="p-3 rounded-lg border-2" style={{
+                    backgroundColor: getAccentColorClassWithOpacity(accentColor, 0.1),
+                    borderColor: getAccentColorClass(accentColor)
+                  }}>
                     <div className="flex justify-between items-center text-sm">
                       <span className="font-medium" style={{ color: getAccentTextColor(accentColor) }}>
                         Beurt: <strong>{formatDartScores(currentPlayer.currentDarts)}</strong>
@@ -579,7 +717,7 @@ export default function ScoreboardPage() {
                     <div className="grid grid-cols-3 gap-2">
                       {[0, 1, 2].map((i) => (
                         <div key={i} className="relative">
-                          <label className="text-[10px] text-slate-500 absolute -top-1.5 left-2 bg-white px-1">
+                          <label className="text-[10px] text-slate-500 dark:text-slate-400 absolute -top-1.5 left-2 bg-white dark:bg-slate-900 px-1">
                             Dart {i + 1}
                           </label>
                           <input
@@ -597,7 +735,7 @@ export default function ScoreboardPage() {
                               }
                             }}
                             placeholder="0"
-                            className="w-full text-center text-xl font-bold p-3 pt-5 border-2 rounded-lg focus:outline-none focus:ring-2 transition-all"
+                            className="w-full text-center text-xl font-bold p-3 pt-5 border-2 rounded-lg focus:outline-none focus:ring-2 transition-all dark:bg-slate-800 dark:border-slate-700 dark:text-white"
                             style={{
                               borderColor: currentPlayer.currentDarts[i] ? getAccentColorClass(accentColor) : 'rgb(226, 232, 240)',
                               focusRingColor: getAccentColorClass(accentColor)
@@ -631,22 +769,17 @@ export default function ScoreboardPage() {
 
                 {/* Check-out Suggestions */}
                 {checkOut.length > 0 && (
-                  <div className="p-3 rounded-lg border-2"
-                    style={{
-                      backgroundColor: getAccentColorClassWithOpacity(accentColor, 0.1),
-                      borderColor: getAccentColorClass(accentColor)
-                    }}>
-                    <p className="text-sm font-semibold mb-2 flex items-center gap-2" style={{ color: getAccentTextColor(accentColor) }}>
+                  <div className="p-3 rounded-lg border-2 bg-amber-50 border-amber-300 dark:bg-amber-950/20 dark:border-amber-800">
+                    <p className="text-sm font-semibold text-amber-900 dark:text-amber-200 mb-2 flex items-center gap-2">
                       <Target className="h-4 w-4" />
                       Check-out ({currentPlayer.score}):
                     </p>
                     <div className="flex flex-wrap gap-1.5">
                       {checkOut.map((out, i) => (
-                        <Badge 
-                          key={i} 
-                          variant="secondary" 
-                          className="text-xs font-mono py-1 px-2 hover:opacity-80 cursor-pointer transition-colors"
-                          style={{ backgroundColor: getAccentColorClassWithOpacity(accentColor, 0.15), color: getAccentTextColor(accentColor) }}
+                        <Badge
+                          key={i}
+                          variant="secondary"
+                          className="bg-amber-100 text-amber-800 border-amber-300 text-xs font-mono py-1 px-2 hover:bg-amber-200 cursor-pointer transition-colors dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-700"
                         >
                           {out}
                         </Badge>
@@ -659,6 +792,83 @@ export default function ScoreboardPage() {
           )}
         </div>
       </main>
+
+      {/* Edit Name Dialog */}
+      <Dialog open={editNameDialog.open} onOpenChange={(open) => setEditNameDialog({ open, playerId: null, name: '' })}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Naam wijzigen</DialogTitle>
+            <DialogDescription>Voer de nieuwe naam van de speler in</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div>
+              <Label htmlFor="player-name">Spelernaam</Label>
+              <Input
+                id="player-name"
+                value={editNameDialog.name}
+                onChange={(e) => setEditNameDialog({ ...editNameDialog, name: e.target.value })}
+                placeholder="Naam van de speler"
+                onKeyDown={(e) => e.key === 'Enter' && handleEditPlayerName()}
+              />
+            </div>
+            <div className="flex gap-3">
+              <Button
+                variant="outline"
+                onClick={() => setEditNameDialog({ open: false, playerId: null, name: '' })}
+                className="flex-1"
+              >
+                Annuleren
+              </Button>
+              <Button
+                onClick={handleEditPlayerName}
+                className="flex-1"
+                style={{ backgroundColor: getAccentColorClass(accentColor) }}
+              >
+                Opslaan
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Score Dialog */}
+      <Dialog open={editScoreDialog.open} onOpenChange={(open) => setEditScoreDialog({ open, playerId: null, roundIndex: null, dartIndex: null, value: '' })}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Score aanpassen</DialogTitle>
+            <DialogDescription>Voer de nieuwe score in</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div>
+              <Label htmlFor="edit-score">Nieuwe score</Label>
+              <Input
+                id="edit-score"
+                type="number"
+                value={editScoreDialog.value}
+                onChange={(e) => setEditScoreDialog({ ...editScoreDialog, value: e.target.value })}
+                placeholder="0-180"
+                onKeyDown={(e) => e.key === 'Enter' && handleEditScore()}
+              />
+            </div>
+            <div className="flex gap-3">
+              <Button
+                variant="outline"
+                onClick={() => setEditScoreDialog({ open: false, playerId: null, roundIndex: null, dartIndex: null, value: '' })}
+                className="flex-1"
+              >
+                Annuleren
+              </Button>
+              <Button
+                onClick={handleEditScore}
+                className="flex-1"
+                style={{ backgroundColor: getAccentColorClass(accentColor) }}
+              >
+                Opslaan
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Mobile Navigation */}
       <MobileNav />

@@ -1,32 +1,28 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 
-// POST - Submit a score for a challenge
+// POST - Submit a challenge score
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
-    const { userId, challengeId, score } = body;
+    const { userId, challengeId, score } = await request.json();
 
     if (!userId || !challengeId || score === undefined) {
       return NextResponse.json(
-        { error: 'userId, challengeId en score zijn verplicht' },
+        { error: 'Vul alle velden in' },
         { status: 400 }
       );
     }
 
-    // Check if user already submitted a score for this challenge
+    // Check if user already submitted for this challenge
     const existingScore = await db.challengeScore.findUnique({
       where: {
-        userId_challengeId: {
-          userId,
-          challengeId
-        }
+        userId_challengeId: { userId, challengeId }
       }
     });
 
     if (existingScore) {
       return NextResponse.json(
-        { error: 'Je hebt al een score ingediend voor deze challenge' },
+        { error: 'Je hebt al een score ingediend voor deze challenge. Je mag maar één keer deelnemen.' },
         { status: 400 }
       );
     }
@@ -43,16 +39,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (new Date() > new Date(challenge.expiresAt)) {
+    if (new Date() > challenge.expiresAt) {
       return NextResponse.json(
-        { error: 'Deze challenge is verlopen' },
-        { status: 400 }
-      );
-    }
-
-    if (new Date() < new Date(challenge.scheduledAt)) {
-      return NextResponse.json(
-        { error: 'Deze challenge is nog niet begonnen' },
+        { error: 'Deze challenge is afgelopen. Je kunt geen score meer indienen.' },
         { status: 400 }
       );
     }
@@ -68,13 +57,6 @@ export async function POST(request: NextRequest) {
       include: {
         user: {
           select: {
-            id: true,
-            name: true
-          }
-        },
-        challenge: {
-          select: {
-            id: true,
             name: true
           }
         }
@@ -83,70 +65,55 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      message: 'Score opgeslagen!',
-      challengeScore
+      message: 'Score succesvol ingediend!',
+      score: challengeScore
     });
 
   } catch (error) {
     console.error('Submit challenge score error:', error);
     return NextResponse.json(
-      { error: 'Er ging iets mis bij het opslaan van je score' },
+      { error: 'Er ging iets mis bij het indienen van je score' },
       { status: 500 }
     );
   }
 }
 
-// GET - Get scores for a specific challenge or user
+// GET - Get user's scores for challenges
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const challengeId = searchParams.get('challengeId');
     const userId = searchParams.get('userId');
+    const challengeId = searchParams.get('challengeId');
 
-    let scores;
-
-    if (challengeId) {
-      scores = await db.challengeScore.findMany({
-        where: { challengeId },
-        include: {
-          user: {
-            select: {
-              id: true,
-              name: true
-            }
-          }
-        },
-        orderBy: { score: 'desc' }
-      });
-    } else if (userId) {
-      scores = await db.challengeScore.findMany({
-        where: { userId },
-        include: {
-          challenge: {
-            select: {
-              id: true,
-              name: true,
-              gameType: true,
-              scheduledAt: true,
-              expiresAt: true
-            }
-          }
-        },
-        orderBy: { completedAt: 'desc' }
-      });
-    } else {
+    if (!userId) {
       return NextResponse.json(
-        { error: 'challengeId of userId is verplicht' },
+        { error: 'User ID is vereist' },
         { status: 400 }
       );
     }
+
+    const scores = await db.challengeScore.findMany({
+      where: challengeId
+        ? { userId, challengeId }
+        : { userId },
+      include: {
+        challenge: {
+          select: {
+            id: true,
+            name: true,
+            gameType: true
+          }
+        }
+      },
+      orderBy: { completedAt: 'desc' }
+    });
 
     return NextResponse.json({ success: true, scores });
 
   } catch (error) {
     console.error('Get challenge scores error:', error);
     return NextResponse.json(
-      { error: 'Er ging iets mis bij het ophalen van de scores' },
+      { error: 'Er ging iets mis bij het ophalen van scores' },
       { status: 500 }
     );
   }

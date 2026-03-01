@@ -1,657 +1,496 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Target, Calendar, Trophy, Zap, Clock, Users, Play, Send, Check, X } from 'lucide-react';
+import { Target, Calendar, Trophy, Zap, Clock, Users, Lock, Unlock, Medal, Star, TrendingUp, Award, ChevronRight, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { MobileNav } from '@/components/mobile-nav';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { MobileNav } from '@/components/mobile-nav';
-import { MatchInvitations } from '@/components/match-invitations';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
-import { useSettings } from '@/contexts/settings-context';
-import { toast } from '@/hooks/use-toast';
 
-type Challenge = {
-  id: string;
-  name: string;
-  description: string;
-  gameType: string;
-  targetScore: number | null;
-  rules: string;
-  scheduledAt: string;
-  expiresAt: string;
-  scores: ChallengeScore[];
+// Simulate current user - in real app this comes from auth
+const currentUser = {
+  id: 'user-1',
+  name: 'Jan de Vries'
 };
 
-type ChallengeScore = {
-  id: string;
-  score: number;
-  completedAt: string;
-  user: {
-    id: string;
-    name: string;
-  };
+// Difficulty colors
+const getDifficultyColor = (difficulty: string) => {
+  switch (difficulty?.toLowerCase()) {
+    case 'beginner':
+      return 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400';
+    case 'intermediate':
+      return 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400';
+    case 'advanced':
+      return 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400';
+    default:
+      return 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-400';
+  }
 };
 
-type User = {
-  id: string;
-  name: string;
-  email: string;
-};
-
-const gameTypeNames: Record<string, string> = {
-  '501': '501',
-  '301': '301',
-  'cricket': 'Cricket',
-  'around-clock': 'Around the Clock',
-  'high-score': 'High Score',
-  'treble-hunt': 'Trebles Jacht',
-  'double-trouble': 'Double Master',
-  'bull-master': 'Bull Master',
-  '180-hunter': '180 Hunter',
-  'shanghai': 'Shanghai',
-  'mickey-mouse': 'Mickey Mouse',
-  'killers': 'Killer',
-  'gotcha': 'Gotcha',
-  'golf': 'Golf Darts',
-  'all-five': 'All Five',
-  'sudden-death': 'Sudden Death'
-};
-
-const difficultyFromGameType: Record<string, string> = {
-  '501': 'intermediate',
-  '301': 'intermediate',
-  'cricket': 'intermediate',
-  'around-clock': 'beginner',
-  'high-score': 'beginner',
-  'treble-hunt': 'advanced',
-  'double-trouble': 'intermediate',
-  'bull-master': 'advanced',
-  '180-hunter': 'advanced',
-  'shanghai': 'intermediate',
-  'mickey-mouse': 'advanced',
-  'killers': 'intermediate',
-  'gotcha': 'beginner',
-  'golf': 'intermediate',
-  'all-five': 'beginner',
-  'sudden-death': 'advanced'
-};
-
-const difficultyColors = {
-  beginner: 'bg-emerald-100 text-emerald-700',
-  intermediate: 'bg-amber-100 text-amber-700',
-  advanced: 'bg-rose-100 text-rose-700'
+const getDifficultyLabel = (difficulty: string) => {
+  switch (difficulty?.toLowerCase()) {
+    case 'beginner': return 'Beginner';
+    case 'intermediate': return 'Gevorderd';
+    case 'advanced': return 'Expert';
+    default: return difficulty;
+  }
 };
 
 export default function ChallengesPage() {
-  const { preferences } = useSettings();
-  const accentColor = preferences.accentColor || 'emerald';
-
-  const [challenges, setChallenges] = useState<Challenge[]>([]);
+  const [challenges, setChallenges] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedChallenge, setSelectedChallenge] = useState<Challenge | null>(null);
-  const [submitScoreOpen, setSubmitScoreOpen] = useState(false);
-  const [inviteOpen, setInviteOpen] = useState(false);
-  const [scoreInput, setScoreInput] = useState('');
-  const [inviteEmail, setInviteEmail] = useState('');
-  const [submitting, setSubmitting] = useState(false);
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [activeTab, setActiveTab] = useState<'daily' | 'matches' | 'upcoming' | 'past'>('daily');
+  const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
+  const [groups, setGroups] = useState<any[]>([]);
+  const [userScores, setUserScores] = useState<Record<string, any>>({});
+  const [submitDialog, setSubmitDialog] = useState<{ open: boolean; challengeId: string | null }>({ open: false, challengeId: null });
+  const [submitScore, setSubmitScore] = useState('');
+  const { toast } = useToast();
 
-  // Helper functions for accent colors
-  const getAccentColorClass = (color: string) => {
-    const colors: Record<string, string> = {
-      emerald: 'bg-emerald-600',
-      blue: 'bg-blue-600',
-      purple: 'bg-purple-600',
-      rose: 'bg-rose-600',
-      amber: 'bg-amber-600',
-      orange: 'bg-orange-600',
-      teal: 'bg-teal-600',
-      slate: 'bg-slate-600',
-    };
-    return colors[color] || 'bg-emerald-600';
-  };
-
-  const getAccentTextColor = (color: string) => {
-    const colors: Record<string, string> = {
-      emerald: 'text-emerald-600',
-      blue: 'text-blue-600',
-      purple: 'text-purple-600',
-      rose: 'text-rose-600',
-      amber: 'text-amber-600',
-      orange: 'text-orange-600',
-      teal: 'text-teal-600',
-      slate: 'text-slate-600',
-    };
-    return colors[color] || 'text-emerald-600';
-  };
-
-  const getAccentColorClassWithOpacity = (color: string, opacity: number = 0.2) => {
-    const colors: Record<string, string> = {
-      emerald: 'rgb(16, 185, 129)',
-      blue: 'rgb(37, 99, 235)',
-      purple: 'rgb(147, 51, 234)',
-      rose: 'rgb(244, 63, 94)',
-      amber: 'rgb(245, 158, 11)',
-      orange: 'rgb(249, 115, 22)',
-      teal: 'rgb(20, 184, 166)',
-      slate: 'rgb(71, 85, 105)',
-    };
-    const baseColor = colors[color] || colors.emerald;
-    return baseColor.replace(')', `, ${opacity})`).replace('rgb', 'rgba');
-  };
-
-  // Fetch challenges
+  // Load challenges and user data
   useEffect(() => {
-    fetchChallenges();
-    checkCurrentUser();
+    loadChallenges();
+    loadGroups();
+    loadUserScores();
   }, []);
 
-  const fetchChallenges = async () => {
+  const loadChallenges = async () => {
     try {
-      setLoading(true);
-      const response = await fetch('/api/challenges');
-      const data = await response.json();
+      const res = await fetch(`/api/challenges/grouped?userId=${currentUser.id}&active=true`);
+      const data = await res.json();
       if (data.success) {
         setChallenges(data.challenges);
       }
     } catch (error) {
-      console.error('Error fetching challenges:', error);
+      console.error('Error loading challenges:', error);
     } finally {
       setLoading(false);
     }
   };
 
-  const checkCurrentUser = () => {
-    const userData = localStorage.getItem('user');
-    if (userData) {
-      setCurrentUser(JSON.parse(userData));
+  const loadGroups = async () => {
+    try {
+      const res = await fetch(`/api/groups?userId=${currentUser.id}`);
+      const data = await res.json();
+      if (data.success) {
+        setGroups(data.groups);
+        if (data.groups.length > 0) {
+          setSelectedGroupId(data.groups[0].id);
+        }
+      }
+    } catch (error) {
+      console.error('Error loading groups:', error);
     }
   };
 
-  const getTodayChallenge = () => {
-    const now = new Date();
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    return challenges.find(c => {
-      const scheduledDate = new Date(c.scheduledAt);
-      return scheduledDate.toDateString() === today.toDateString();
-    });
+  const loadUserScores = async () => {
+    try {
+      const res = await fetch(`/api/challenges/scores?userId=${currentUser.id}`);
+      const data = await res.json();
+      if (data.success) {
+        const scoresMap: Record<string, any> = {};
+        data.scores.forEach((score: any) => {
+          scoresMap[score.challengeId] = score;
+        });
+        setUserScores(scoresMap);
+      }
+    } catch (error) {
+      console.error('Error loading user scores:', error);
+    }
   };
 
-  const getActiveChallenges = () => {
-    const now = new Date();
-    return challenges.filter(c => {
-      const scheduled = new Date(c.scheduledAt);
-      const expires = new Date(c.expiresAt);
-      return scheduled <= now && expires > now;
-    });
-  };
-
-  const getPastChallenges = () => {
-    const now = new Date();
-    return challenges.filter(c => {
-      const expires = new Date(c.expiresAt);
-      return expires <= now;
-    }).slice(0, 5);
-  };
-
-  const handleScoreSubmit = async () => {
-    if (!selectedChallenge || !currentUser) return;
-
-    const score = parseInt(scoreInput);
+  const handleSubmitScore = async (challengeId: string) => {
+    const score = parseInt(submitScore);
     if (isNaN(score) || score < 0) {
       toast({
         variant: 'destructive',
         title: 'Ongeldige score',
-        description: 'Voer een geldig positief getal in.'
+        description: 'Voer een geldig nummer in'
       });
       return;
     }
 
     try {
-      setSubmitting(true);
-      const response = await fetch('/api/challenges/scores', {
+      const res = await fetch('/api/challenges/scores', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           userId: currentUser.id,
-          challengeId: selectedChallenge.id,
+          challengeId,
           score
         })
       });
 
-      const data = await response.json();
-
+      const data = await res.json();
       if (data.success) {
         toast({
-          title: 'Score opgeslagen!',
-          description: 'Je score is succesvol ingediend voor de challenge.'
+          title: 'Score ingediend!',
+          description: `Je score van ${score} is succesvol opgeslagen.`
         });
-        setSubmitScoreOpen(false);
-        setScoreInput('');
-        fetchChallenges();
+        setSubmitDialog({ open: false, challengeId: null });
+        setSubmitScore('');
+        loadChallenges();
+        loadUserScores();
       } else {
         toast({
           variant: 'destructive',
           title: 'Fout',
-          description: data.error || 'Er ging iets mis.'
+          description: data.error
         });
       }
     } catch (error) {
       toast({
         variant: 'destructive',
         title: 'Fout',
-        description: 'Er ging iets mis bij het opslaan van je score.'
+        description: 'Er ging iets mis'
       });
-    } finally {
-      setSubmitting(false);
     }
   };
 
-  const handleInvite = async () => {
-    if (!selectedChallenge || !currentUser) return;
-
-    if (!inviteEmail || !inviteEmail.includes('@')) {
-      toast({
-        variant: 'destructive',
-        title: 'Ongeldig e-mailadres',
-        description: 'Voer een geldig e-mailadres in.'
-      });
-      return;
-    }
-
-    try {
-      setSubmitting(true);
-      const response = await fetch('/api/challenges/invite', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: inviteEmail,
-          challengeId: selectedChallenge.id,
-          inviterId: currentUser.id
-        })
-      });
-
-      const data = await response.json();
-
-      if (data.success) {
-        toast({
-          title: 'Uitnodiging verzonden!',
-          description: `${data.invitedUser.name} is uitgenodigd om mee te doen met de challenge.`
-        });
-        setInviteOpen(false);
-        setInviteEmail('');
-      } else {
-        toast({
-          variant: 'destructive',
-          title: 'Fout',
-          description: data.error || 'Er ging iets mis.'
-        });
-      }
-    } catch (error) {
-      toast({
-        variant: 'destructive',
-        title: 'Fout',
-        description: 'Er ging iets mis bij het verzenden van de uitnodiging.'
-      });
-    } finally {
-      setSubmitting(false);
-    }
+  const getGroupMembers = (groupId: string) => {
+    const group = groups.find(g => g.id === groupId);
+    return group?.members || [];
   };
 
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    const days = ['Zondag', 'Maandag', 'Dinsdag', 'Woensdag', 'Donderdag', 'Vrijdag', 'Zaterdag'];
-    return days[date.getDay()];
+  const getFilteredScores = (challenge: any) => {
+    if (!selectedGroupId) return challenge.scores;
+    const memberIds = getGroupMembers(selectedGroupId).map((m: any) => m.id);
+    return challenge.scores.filter((s: any) => memberIds.includes(s.userId));
   };
 
-  const formatTime = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' });
+  const isChallengeActive = (challenge: any) => {
+    const now = new Date();
+    return new Date(challenge.scheduledAt) <= now && new Date(challenge.expiresAt) > now;
   };
 
-  const todayChallenge = getTodayChallenge();
+  const isChallengeExpired = (challenge: any) => {
+    return new Date() > new Date(challenge.expiresAt);
+  };
+
+  const hasUserSubmitted = (challengeId: string) => {
+    return !!userScores[challengeId];
+  };
+
+  const getWinnerBadge = (index: number) => {
+    if (index === 0) return <Medal className="h-5 w-5 text-yellow-500" />;
+    if (index === 1) return <Medal className="h-5 w-5 text-slate-400" />;
+    if (index === 2) return <Medal className="h-5 w-5 text-amber-600" />;
+    return null;
+  };
 
   return (
-    <div className="min-h-screen flex flex-col bg-gradient-to-b from-slate-50 to-slate-100">
-      {/* Header - Compact */}
-      <header className="sticky top-0 z-50 w-full border-b bg-white/80 backdrop-blur-sm">
-        <div className="container mx-auto px-3 py-2">
+    <div className="min-h-screen flex flex-col bg-gradient-to-br from-slate-50 via-emerald-50/20 to-slate-100 dark:from-slate-950 dark:via-emerald-950/20 dark:to-slate-900">
+      {/* Header */}
+      <header className="sticky top-0 z-50 w-full border-b bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm shadow-sm">
+        <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
-            <Link href="/" className="flex items-center gap-2">
-              <div className="w-7 h-7 rounded-full flex items-center justify-center" style={{ backgroundColor: getAccentColorClass(accentColor) }}>
-                <Target className="h-3.5 w-3.5 text-white" />
+            <Link href="/" className="flex items-center gap-2 group">
+              <div className="h-10 w-10 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-xl flex items-center justify-center shadow-lg group-hover:scale-105 transition-transform">
+                <Target className="h-6 w-6 text-white" />
               </div>
               <div>
-                <h1 className="text-base font-bold text-slate-900 leading-tight">
-                  {preferences.groupName || 'DartsPro'}
-                </h1>
-                <Badge variant="secondary" className="text-[9px] px-1 py-0 h-4" style={{ backgroundColor: getAccentColorClassWithOpacity(accentColor), color: getAccentTextColor(accentColor) }}>
-                  <Zap className="h-2.5 w-2.5 mr-0.5" />
-                  Dagelijkse Challenges
-                </Badge>
+                <h1 className="text-xl font-bold text-slate-900 dark:text-white">DartsPro</h1>
+                <p className="text-xs text-slate-500 dark:text-slate-400">Competitie & Challenges</p>
               </div>
             </Link>
+            <div className="flex items-center gap-2">
+              <Badge className="bg-gradient-to-r from-amber-500 to-orange-500 text-white border-0">
+                <Zap className="h-3 w-3 mr-1" />
+                Dagelijkse Challenges
+              </Badge>
+            </div>
           </div>
         </div>
       </header>
 
-      <main className="flex-1 container mx-auto px-3 py-2 pb-20 overflow-auto">
-        <div className="max-w-6xl mx-auto space-y-3">
-          {/* Tabs for different views */}
-          <Tabs defaultValue="daily" className="w-full">
-            <TabsList className="grid w-full grid-cols-2 h-8">
-              <TabsTrigger value="daily" className="text-xs">Dagelijkse</TabsTrigger>
-              <TabsTrigger value="matches" className="text-xs">Match Uitnodigingen</TabsTrigger>
-            </TabsList>
+      <main className="flex-1 container mx-auto px-4 py-6 pb-24">
+        <div className="max-w-6xl mx-auto space-y-6">
+          {/* Hero Section */}
+          <Card className="bg-gradient-to-r from-emerald-600 to-teal-600 text-white border-0 shadow-xl overflow-hidden relative">
+            <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl" />
+            <CardHeader className="relative">
+              <div className="flex items-center gap-3 mb-2">
+                <div className="h-12 w-12 bg-white/20 backdrop-blur rounded-xl flex items-center justify-center">
+                  <Trophy className="h-7 w-7 text-white" />
+                </div>
+                <div>
+                  <CardTitle className="text-3xl font-bold">Dagelijkse Darts Challenges</CardTitle>
+                  <CardDescription className="text-emerald-100 flex items-center gap-2 mt-1">
+                    <Calendar className="h-4 w-4" />
+                    Neem het op tegen je groepsgenoten!
+                  </CardDescription>
+                </div>
+              </div>
+              <p className="text-emerald-50 mt-3 text-lg">
+                Dagelijkse uitdagingen met echte competitie tussen groepsleden. Bewijs je skills en klim naar de top van het leaderboard!
+              </p>
+            </CardHeader>
+          </Card>
 
-            <TabsContent value="daily" className="space-y-2 mt-3">
-              {/* Today's Challenge Card - Compact */}
-              {todayChallenge ? (
-            <Card className="border-2 shadow-lg" style={{ borderColor: getAccentColorClass(accentColor) }}>
-              <CardHeader className="pb-2 px-3">
-                <div className="flex items-start justify-between">
-                  <div className="flex items-center gap-2">
-                    <div className="h-10 w-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: getAccentColorClassWithOpacity(accentColor) }}>
-                      <Trophy className="h-5 w-5" style={{ color: getAccentTextColor(accentColor) }} />
-                    </div>
-                    <div>
-                      <CardTitle className="text-base leading-tight">{todayChallenge.name}</CardTitle>
-                      <CardDescription className="flex items-center gap-2 mt-1 text-[10px]">
-                        <Calendar className="h-3 w-3" />
-                        {formatDate(todayChallenge.scheduledAt)}
-                        <span className="text-slate-400">•</span>
-                        <Clock className="h-3 w-3" />
-                        {formatDate(todayChallenge.expiresAt)} {formatTime(todayChallenge.expiresAt)}
-                      </CardDescription>
-                    </div>
+          {/* Group Selector */}
+          {groups.length > 0 && (
+            <Card className="border-2">
+              <CardContent className="pt-4">
+                <div className="flex items-center gap-3">
+                  <Users className="h-5 w-5 text-slate-600 dark:text-slate-400" />
+                  <Label htmlFor="group-select" className="font-medium">Selecteer je groep:</Label>
+                  <Select value={selectedGroupId || ''} onValueChange={setSelectedGroupId}>
+                    <SelectTrigger id="group-select" className="flex-1 max-w-md">
+                      <SelectValue placeholder="Kies een groep" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {groups.map((group) => (
+                        <SelectItem key={group.id} value={group.id}>
+                          {group.name} ({group.memberCount} leden)
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* No Groups Message */}
+          {groups.length === 0 && (
+            <Card className="border-2 border-amber-200 bg-amber-50 dark:bg-amber-950/20">
+              <CardContent className="pt-6">
+                <div className="flex items-start gap-3">
+                  <Users className="h-6 w-6 text-amber-600 mt-1" />
+                  <div>
+                    <h3 className="font-semibold text-amber-900 dark:text-amber-200">Nog geen groep?</h3>
+                    <p className="text-sm text-amber-800 dark:text-amber-300 mt-1">
+                      Word lid van een groep om mee te doen aan challenges en je scores te vergelijken met teamgenoten.
+                    </p>
                   </div>
-                  <Badge className={`text-[10px] px-2 py-0.5 ${difficultyColors[difficultyFromGameType[todayChallenge.gameType] as keyof typeof difficultyColors]}`}>
-                    {difficultyFromGameType[todayChallenge.gameType]}
-                  </Badge>
                 </div>
-              </CardHeader>
-              <CardContent className="space-y-2 px-3">
-                <p className="text-xs text-slate-700 line-clamp-2">{todayChallenge.description}</p>
+              </CardContent>
+            </Card>
+          )}
 
-                <div className="p-2 bg-slate-50 rounded-lg">
-                  <h4 className="font-semibold mb-1 flex items-center gap-2 text-xs">
-                    <Target className="h-3 w-3" style={{ color: getAccentTextColor(accentColor) }} />
-                    Regels
-                  </h4>
-                  <p className="text-[10px] text-slate-600 line-clamp-2">{todayChallenge.rules}</p>
-                </div>
+          {/* Loading State */}
+          {loading ? (
+            <div className="text-center py-12">
+              <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-emerald-600 border-t-transparent" />
+              <p className="text-slate-600 dark:text-slate-400 mt-4">Challenges laden...</p>
+            </div>
+          ) : challenges.length === 0 ? (
+            <Card className="border-2 border-dashed">
+              <CardContent className="pt-12 pb-12 text-center">
+                <Target className="h-16 w-16 mx-auto text-slate-300 dark:text-slate-600 mb-4" />
+                <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">Geen actieve challenges</h3>
+                <p className="text-slate-600 dark:text-slate-400">
+                  Er zijn momenteel geen actieve challenges. Kom later terug!
+                </p>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="space-y-6">
+              {challenges.map((challenge, index) => {
+                const isActive = isChallengeActive(challenge);
+                const isExpired = isChallengeExpired(challenge);
+                const userSubmitted = hasUserSubmitted(challenge.id);
+                const filteredScores = getFilteredScores(challenge);
 
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3 text-[10px] text-slate-600">
-                    <div className="flex items-center gap-1">
-                      <Users className="h-2.5 w-2.5" />
-                      {todayChallenge.scores.length} deelnemers
-                    </div>
-                    {todayChallenge.targetScore && todayChallenge.targetScore > 0 && (
-                      <div className="flex items-center gap-1">
-                        <Target className="h-2.5 w-2.5" />
-                        {todayChallenge.targetScore}
+                return (
+                  <Card
+                    key={challenge.id}
+                    className={`overflow-hidden transition-all hover:shadow-xl ${
+                      isActive ? 'border-4 border-emerald-400 dark:border-emerald-600 shadow-lg' :
+                      isExpired ? 'opacity-75' : ''
+                    }`}
+                  >
+                    {/* Challenge Header */}
+                    <div className={`bg-gradient-to-r ${
+                      isActive ? 'from-emerald-500 to-teal-500' :
+                      isExpired ? 'from-slate-400 to-slate-500' : 'from-amber-500 to-orange-500'
+                    } px-6 py-4`}>
+                      <div className="flex items-start justify-between">
+                        <div className="flex items-center gap-4">
+                          <div className="h-14 w-14 bg-white/20 backdrop-blur rounded-xl flex items-center justify-center">
+                            {isActive && <Trophy className="h-8 w-8 text-white" />}
+                            {isExpired && <Lock className="h-8 w-8 text-white/70" />}
+                            {!isActive && !isExpired && <Clock className="h-8 w-8 text-white" />}
+                          </div>
+                          <div>
+                            <h3 className="text-xl font-bold text-white">{challenge.name}</h3>
+                            <div className="flex items-center gap-3 mt-1 text-white/90 text-sm">
+                              <span className="flex items-center gap-1">
+                                <Calendar className="h-4 w-4" />
+                                {new Date(challenge.scheduledAt).toLocaleDateString('nl-NL', { weekday: 'long', day: 'numeric', month: 'long' })}
+                              </span>
+                              {isActive && (
+                                <span className="flex items-center gap-1">
+                                  <Clock className="h-4 w-4" />
+                                  Verloopt: {new Date(challenge.expiresAt).toLocaleDateString('nl-NL', { weekday: 'short', hour: '2-digit', minute: '2-digit' })}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                        <Badge className={`${getDifficultyColor(challenge.difficulty || 'intermediate')} border-0`}>
+                          {getDifficultyLabel(challenge.difficulty)}
+                        </Badge>
                       </div>
-                    )}
-                  </div>
+                    </div>
 
-                  <div className="flex gap-1.5">
-                    {currentUser ? (
-                      <>
-                        {todayChallenge.scores.find(s => s.user.id === currentUser.id) ? (
-                          <Button size="sm" variant="outline" disabled className="text-[10px] h-7 px-2">
-                            <Check className="h-3 w-3 mr-1" />
-                            Ingediend
-                          </Button>
-                        ) : (
-                          <Dialog open={submitScoreOpen} onOpenChange={setSubmitScoreOpen}>
-                            <DialogTrigger asChild>
-                              <Button size="sm" className="text-[10px] h-7 px-2" style={{ backgroundColor: getAccentColorClass(accentColor) }}>
-                                <Play className="h-3 w-3 mr-1" />
-                                Doe Mee
-                              </Button>
-                            </DialogTrigger>
-                            <DialogContent>
-                              <DialogHeader>
-                                <DialogTitle>Score Invoeren</DialogTitle>
-                                <DialogDescription>
-                                  Voer je score in voor: {todayChallenge.name}
-                                </DialogDescription>
-                              </DialogHeader>
-                              <div className="space-y-4 py-4">
-                                <div>
-                                  <Label htmlFor="score">Je Score</Label>
-                                  <Input
-                                    id="score"
-                                    type="number"
-                                    placeholder="Voer je score in..."
-                                    value={scoreInput}
-                                    onChange={(e) => setScoreInput(e.target.value)}
-                                    className="mt-2"
-                                  />
+                    <CardContent className="p-6 space-y-4">
+                      {/* Challenge Details */}
+                      <div className="space-y-3">
+                        <p className="text-slate-700 dark:text-slate-300">{challenge.description}</p>
+
+                        <div className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl border">
+                          <h4 className="font-semibold mb-2 flex items-center gap-2 text-slate-900 dark:text-white">
+                            <Target className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                            Regels
+                          </h4>
+                          <p className="text-sm text-slate-600 dark:text-slate-400">{challenge.rules}</p>
+                        </div>
+                      </div>
+
+                      {/* Leaderboard */}
+                      {filteredScores.length > 0 ? (
+                        <div className="space-y-3">
+                          <h4 className="font-semibold flex items-center gap-2 text-slate-900 dark:text-white">
+                            <Award className="h-4 w-4 text-amber-600" />
+                            Leaderboard ({filteredScores.length} deelnemers)
+                          </h4>
+                          <div className="space-y-2 max-h-64 overflow-y-auto">
+                            {filteredScores.slice(0, 10).map((entry: any, idx: number) => (
+                              <div
+                                key={entry.id}
+                                className={`flex items-center justify-between p-3 rounded-lg border-2 transition-all ${
+                                  entry.userId === currentUser.id
+                                    ? 'bg-emerald-50 dark:bg-emerald-950/30 border-emerald-300 dark:border-emerald-700'
+                                    : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700'
+                                }`}
+                              >
+                                <div className="flex items-center gap-3">
+                                  <div className="w-8 h-8 flex items-center justify-center">
+                                    {getWinnerBadge(idx)}
+                                  </div>
+                                  <div>
+                                    <p className={`font-medium ${entry.userId === currentUser.id ? 'text-emerald-700 dark:text-emerald-400' : 'text-slate-900 dark:text-white'}`}>
+                                      {entry.user.name}
+                                      {entry.userId === currentUser.id && (
+                                        <Badge className="ml-2 text-xs bg-emerald-600 text-white">Jij</Badge>
+                                      )}
+                                    </p>
+                                  </div>
                                 </div>
-                                <div className="flex gap-2">
-                                  <Button
-                                    onClick={handleScoreSubmit}
-                                    disabled={submitting}
-                                    className="flex-1"
-                                    style={{ backgroundColor: getAccentColorClass(accentColor) }}
-                                  >
-                                    {submitting ? 'Opslaan...' : 'Score Opslaan'}
-                                  </Button>
-                                  <Button
-                                    variant="outline"
-                                    onClick={() => setSubmitScoreOpen(false)}
-                                  >
-                                    Annuleren
-                                  </Button>
+                                <div className="text-right">
+                                  <p className="text-2xl font-bold text-slate-900 dark:text-white">{entry.score}</p>
+                                  {idx === 0 && (
+                                    <div className="flex items-center gap-1 text-amber-600 text-xs mt-1">
+                                      <TrendingUp className="h-3 w-3" />
+                                      <span>Leider</span>
+                                    </div>
+                                  )}
                                 </div>
                               </div>
-                            </DialogContent>
-                          </Dialog>
-                        )}
-                        <Dialog open={inviteOpen} onOpenChange={setInviteOpen}>
+                            ))}
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="text-center py-6 bg-slate-50 dark:bg-slate-800/50 rounded-xl border-2 border-dashed">
+                          <Users className="h-8 w-8 mx-auto text-slate-400 mb-2" />
+                          <p className="text-sm text-slate-600 dark:text-slate-400">
+                            Nog geen scores ingediend voor deze challenge
+                          </p>
+                        </div>
+                      )}
+
+                      {/* Action Buttons */}
+                      {isActive && !userSubmitted && (
+                        <Dialog open={submitDialog.open && submitDialog.challengeId === challenge.id} onOpenChange={(open) => setSubmitDialog({ open, challengeId: open ? challenge.id : null })}>
                           <DialogTrigger asChild>
-                            <Button size="sm" variant="outline" className="text-[10px] h-7 px-2">
-                              <Send className="h-3 w-3 mr-1" />
-                              Uitnodigen
+                            <Button size="lg" className="w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white shadow-lg">
+                              <Zap className="h-5 w-5 mr-2" />
+                              Doe Mee met deze Challenge
                             </Button>
                           </DialogTrigger>
                           <DialogContent>
                             <DialogHeader>
-                              <DialogTitle>Uitnodigen</DialogTitle>
+                              <DialogTitle>Score indienen voor {challenge.name}</DialogTitle>
                               <DialogDescription>
-                                Nodig iemand uit om mee te doen met: {todayChallenge.name}
+                                Voer je score in. Je kunt dit maar één keer doen, dus wees zeker van je resultaat!
                               </DialogDescription>
                             </DialogHeader>
                             <div className="space-y-4 py-4">
                               <div>
-                                <Label htmlFor="email">E-mailadres</Label>
+                                <Label htmlFor="score">Jouw Score</Label>
                                 <Input
-                                  id="email"
-                                  type="email"
-                                  placeholder="email@voorbeeld.nl"
-                                  value={inviteEmail}
-                                  onChange={(e) => setInviteEmail(e.target.value)}
-                                  className="mt-2"
+                                  id="score"
+                                  type="number"
+                                  value={submitScore}
+                                  onChange={(e) => setSubmitScore(e.target.value)}
+                                  placeholder="Voer je score in..."
+                                  className="text-2xl font-bold h-16 text-center"
                                 />
                               </div>
-                              <div className="flex gap-2">
-                                <Button
-                                  onClick={handleInvite}
-                                  disabled={submitting}
-                                  className="flex-1"
-                                  style={{ backgroundColor: getAccentColorClass(accentColor) }}
-                                >
-                                  {submitting ? 'Verzenden...' : 'Uitnodiging Versturen'}
-                                </Button>
+                              <p className="text-sm text-slate-600 dark:text-slate-400">
+                                ⚠️ Je kunt slechts één keer een score indienen per challenge. Wees zeker van je resultaat voordat je opslaat.
+                              </p>
+                              <div className="flex gap-3">
                                 <Button
                                   variant="outline"
-                                  onClick={() => setInviteOpen(false)}
+                                  onClick={() => setSubmitDialog({ open: false, challengeId: null })}
+                                  className="flex-1"
                                 >
                                   Annuleren
+                                </Button>
+                                <Button
+                                  onClick={() => handleSubmitScore(challenge.id)}
+                                  className="flex-1 bg-emerald-600 hover:bg-emerald-700"
+                                  disabled={!submitScore}
+                                >
+                                  Score Opslaan
                                 </Button>
                               </div>
                             </div>
                           </DialogContent>
                         </Dialog>
-                      </>
-                    ) : (
-                      <Button size="sm" variant="outline" className="text-[10px] h-7 px-2" asChild>
-                        <Link href="/login">Inloggen</Link>
-                      </Button>
-                    )}
-                  </div>
-                </div>
+                      )}
 
-                {/* Leaderboard for this challenge - Compact */}
-                {todayChallenge.scores.length > 0 && (
-                  <div className="mt-2 pt-2 border-t">
-                    <h4 className="font-semibold mb-2 text-xs flex items-center gap-2">
-                      <Trophy className="h-3 w-3" style={{ color: getAccentTextColor(accentColor) }} />
-                      Tussenstand
-                    </h4>
-                    <div className="space-y-1.5">
-                      {todayChallenge.scores.slice(0, 3).map((score, index) => (
-                        <div key={score.id} className="flex items-center justify-between py-1.5 px-2 bg-slate-50 rounded">
-                          <div className="flex items-center gap-2">
-                            <Badge variant={index === 0 ? 'default' : 'secondary'} className="text-[9px] h-5 px-1.5"
-                              style={index === 0 ? { backgroundColor: getAccentColorClass(accentColor) } : {}}>
-                            {index + 1}
-                          </Badge>
-                            <span className="text-xs font-medium truncate max-w-[120px]">{score.user.name}</span>
+                      {userSubmitted && (
+                        <div className="p-4 bg-emerald-50 dark:bg-emerald-950/30 rounded-xl border-2 border-emerald-200 dark:border-emerald-800">
+                          <div className="flex items-center gap-3">
+                            <div className="h-10 w-10 bg-emerald-600 rounded-full flex items-center justify-center">
+                              <Check className="h-6 w-6 text-white" />
+                            </div>
+                            <div className="flex-1">
+                              <p className="font-semibold text-emerald-900 dark:text-emerald-200">Score Ingediend</p>
+                              <p className="text-sm text-emerald-700 dark:text-emerald-400">
+                                Je score van {userScores[challenge.id]?.score} is opgeslagen
+                              </p>
+                            </div>
+                            <Star className="h-6 w-6 text-amber-500" />
                           </div>
-                          <span className="font-bold text-xs" style={{ color: getAccentTextColor(accentColor) }}>
-                            {score.score}
-                          </span>
                         </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="text-center py-4 text-slate-500 text-xs">Geen challenge voor vandaag</div>
+                      )}
+
+                      {isExpired && (
+                        <div className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl border-2 border-slate-200 dark:border-slate-700">
+                          <div className="flex items-center gap-3">
+                            <Lock className="h-6 w-6 text-slate-600 dark:text-slate-400" />
+                            <p className="text-sm text-slate-600 dark:text-slate-400">
+                              Deze challenge is afgelopen. Bekijk de bovenstaande leaderboard voor de resultaten.
+                            </p>
+                          </div>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
           )}
-
-          {/* Upcoming and Past Challenges */}
-          <div className="mt-4">
-            <Tabs defaultValue="upcoming" className="w-full">
-              <TabsList className="grid w-full grid-cols-2 h-8">
-                <TabsTrigger value="upcoming" className="text-xs">Komende</TabsTrigger>
-                <TabsTrigger value="past" className="text-xs">Vorige</TabsTrigger>
-              </TabsList>
-
-            <TabsContent value="upcoming" className="space-y-2 mt-3">
-              {loading ? (
-                <div className="text-center py-4 text-slate-500 text-xs">Laden...</div>
-              ) : getActiveChallenges().length === 0 ? (
-                <div className="text-center py-4 text-slate-500 text-xs">Geen actieve challenges</div>
-              ) : (
-                <div className="space-y-2">
-                  {getActiveChallenges().map((challenge) => (
-                    <Card
-                      key={challenge.id}
-                      className="hover:shadow-md transition-all"
-                    >
-                      <CardHeader className="pb-2 px-3">
-                        <div className="flex items-start justify-between">
-                          <div className="flex items-center gap-2">
-                            <div className="h-8 w-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: getAccentColorClassWithOpacity(accentColor) }}>
-                              <Target className="h-4 w-4" style={{ color: getAccentTextColor(accentColor) }} />
-                            </div>
-                            <div>
-                              <CardTitle className="text-sm leading-tight">{challenge.name}</CardTitle>
-                              <CardDescription className="flex items-center gap-2 mt-0.5 text-[10px]">
-                                <Calendar className="h-2.5 w-2.5" />
-                                {formatDate(challenge.scheduledAt)}
-                              </CardDescription>
-                            </div>
-                          </div>
-                          <Badge className={`text-[9px] px-1.5 py-0.5 h-5 ${difficultyColors[difficultyFromGameType[challenge.gameType] as keyof typeof difficultyColors]}`}>
-                            {difficultyFromGameType[challenge.gameType]}
-                          </Badge>
-                        </div>
-                      </CardHeader>
-                      <CardContent className="px-3 pb-3">
-                        <p className="text-[10px] text-slate-600 mb-2 line-clamp-1">{challenge.description}</p>
-                        <div className="flex items-center justify-between text-[10px] text-slate-500">
-                          <span>{gameTypeNames[challenge.gameType] || challenge.gameType}</span>
-                          <span className="flex items-center gap-1">
-                            <Users className="h-2.5 w-2.5" />
-                            {challenge.scores.length}
-                          </span>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              )}
-            </TabsContent>
-
-            <TabsContent value="past" className="space-y-2 mt-3">
-              {getPastChallenges().length === 0 ? (
-                <div className="text-center py-4 text-slate-500 text-xs">Geen eerdere challenges</div>
-              ) : (
-                <div className="space-y-2">
-                  {getPastChallenges().map((challenge) => (
-                    <Card key={challenge.id} className="opacity-75">
-                      <CardHeader className="pb-2 px-3">
-                        <div className="flex items-start justify-between">
-                          <div className="flex items-center gap-2">
-                            <div className="h-8 w-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: getAccentColorClassWithOpacity(accentColor) }}>
-                              <Trophy className="h-4 w-4" style={{ color: getAccentTextColor(accentColor) }} />
-                            </div>
-                            <div>
-                              <CardTitle className="text-sm leading-tight">{challenge.name}</CardTitle>
-                              <CardDescription className="text-[10px]">{formatDate(challenge.scheduledAt)}</CardDescription>
-                            </div>
-                          </div>
-                          <Badge variant="secondary" className="text-[9px] h-5">Voltooid</Badge>
-                        </div>
-                      </CardHeader>
-                      <CardContent className="px-3 pb-3">
-                        {challenge.scores.length > 0 && (
-                          <div className="pt-2 border-t">
-                            <div className="flex items-center justify-between py-0.5">
-                              <span className="text-[10px] text-slate-600">Winnaar:</span>
-                              <span className="text-[10px] font-semibold" style={{ color: getAccentTextColor(accentColor) }}>
-                                {challenge.scores[0].user.name}
-                              </span>
-                            </div>
-                            <div className="flex items-center justify-between py-0.5">
-                              <span className="text-[10px] text-slate-600">Score:</span>
-                              <span className="text-[10px] font-bold">{challenge.scores[0].score}</span>
-                            </div>
-                          </div>
-                        )}
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              )}
-            </TabsContent>
-            </Tabs>
-          </div>
-        </TabsContent>
-
-        {/* Match Invitations Tab */}
-        <TabsContent value="matches" className="space-y-2 mt-3">
-          <MatchInvitations
-            currentUser={currentUser}
-            getAccentColorClass={getAccentColorClass}
-            getAccentTextColor={getAccentTextColor}
-            accentColor={accentColor}
-          />
-        </TabsContent>
-      </Tabs>
         </div>
       </main>
 
