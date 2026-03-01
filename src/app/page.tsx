@@ -237,19 +237,19 @@ export default function HomePage() {
         </section>
 
         {/* CTA Section */}
-        <section className="py-16" style={{ backgroundColor: getAccentColorClass(preferences.accentColor) }}>
+        <section className="py-16 bg-slate-900">
           <div className="container mx-auto px-4 text-center">
             <h3 className="text-3xl md:text-4xl font-bold text-white mb-4">
               Klaar om te beginnen?
             </h3>
-            <p className="text-lg mb-8 max-w-2xl mx-auto" style={{ color: 'rgba(255, 255, 255, 0.9)' }}>
+            <p className="text-lg mb-8 max-w-2xl mx-auto text-slate-300">
               Registreer nu en word lid van een darts groep, of gebruik de scoreteller zonder account!
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button size="lg" variant="secondary" className="text-lg px-8 text-white" style={{ borderColor: getAccentTextColor(preferences.accentColor) }}>
+              <Button size="lg" className="text-lg px-8 bg-white text-slate-900 hover:bg-slate-100" asChild>
                 <Link href="/register">Maak een account</Link>
               </Button>
-              <Button size="lg" variant="outline" className="text-lg px-8 border-white text-white hover:bg-white/10">
+              <Button size="lg" variant="outline" className="text-lg px-8 border-white text-white hover:bg-white/10 hover:text-white" asChild>
                 <Link href="/scoreboard">Probeer Scoreteller</Link>
               </Button>
             </div>
