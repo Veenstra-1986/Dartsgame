@@ -1,18 +1,8 @@
 {
-  "buildCommand": "prisma generate && next build",
-  "devCommand": "next dev",
+  "buildCommand": "prisma generate && prisma migrate deploy && next build",
+  "devCommand": "next dev", 
   "installCommand": "bun install",
   "framework": "nextjs",
   "outputDirectory": ".next",
-  "regions": ["fra1"],
-  "env": {
-    "DATABASE_URL": "postgresql://postgres.tcuzqnarhczlsbfeqghx:Marimecs%232026@aws-1-eu-central-2.pooler.supabase.com:6543/postgres?sslmode=require&supa=base-pooler.x
-"
-  },
-  "build": {
-    "env": {
-      "DATABASE_URL": "postgresql://postgres.tcuzqnarhczlsbfeqghx:Marimecs%232026@aws-1-eu-central-2.pooler.supabase.com:6543/postgres?sslmode=require&supa=base-pooler.x
-"
-    }
-  }
+  "regions": ["fra1"]
 }
