@@ -249,7 +249,7 @@ export default function HomePage() {
               <Button size="lg" className="text-lg px-8 bg-white text-slate-900 hover:bg-slate-100" asChild>
                 <Link href="/register">Maak een account</Link>
               </Button>
-              <Button size="lg" variant="outline" className="text-lg px-8 border-white text-white hover:bg-white/10 hover:text-white" asChild>
+              <Button size="lg" variant="outline" className="text-lg px-8 border-white text-white hover:bg-white hover:text-slate-900" asChild>
                 <Link href="/scoreboard">Probeer Scoreteller</Link>
               </Button>
             </div>
