@@ -1,0 +1,181 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// User model for players
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String
+  password  String
+  verified  Boolean  @default(false)
+  verificationToken String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Personalization
+  accentColor String?  @default("emerald") // "emerald", "blue", "purple", "rose", "amber", "orange", "teal", "slate"
+  logoUrl    String?  // URL to uploaded company logo
+  groupName  String?  // Custom name for the app (e.g., "Bedrijfs Darts")
+
+  // Relations
+  groupMemberships GroupMember[]
+  challengeScores  ChallengeScore[]
+  matchesAsPlayer1 Match[] @relation("Player1")
+  matchesAsPlayer2 Match[] @relation("Player2")
+  matchScores      MatchScore[]
+  trainingProgress TrainingProgress[]
+}
+
+// Group model for leaderboard groups
+model Group {
+  id          String   @id @default(cuid())
+  name        String
+  code        String   @unique // Join code for invitations
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  members     GroupMember[]
+  invitations Invitation[]
+  matches     Match[]
+}
+
+// Group membership
+model GroupMember {
+  id        String   @id @default(cuid())
+  userId    String
+  groupId   String
+  role      String   @default("member") // "admin", "member"
+  joinedAt  DateTime @default(now())
+
+  // Relations
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  group     Group    @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, groupId])
+}
+
+// Invitation model for group invitations
+model Invitation {
+  id        String   @id @default(cuid())
+  email     String
+  groupId   String
+  token     String   @unique
+  status    String   @default("pending") // "pending", "accepted", "expired"
+  createdAt DateTime @default(now())
+  expiresAt DateTime
+
+  // Relations
+  group     Group    @relation(fields: [groupId], references: [id], onDelete: Cascade)
+}
+
+// Challenge model for daily challenges
+model Challenge {
+  id          String   @id @default(cuid())
+  name        String
+  description String
+  gameType    String   // "501", "301", "Cricket", "Around the Clock", "High Score", etc.
+  targetScore Int?
+  rules       String
+  scheduledAt DateTime @default(now())
+  expiresAt   DateTime
+  createdAt   DateTime @default(now())
+
+  // Relations
+  scores      ChallengeScore[]
+}
+
+// Challenge score tracking
+model ChallengeScore {
+  id          String   @id @default(cuid())
+  userId      String
+  challengeId String
+  score       Int
+  completedAt DateTime @default(now())
+
+  // Relations
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  challenge   Challenge @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, challengeId])
+}
+
+// Match model for head-to-head games
+model Match {
+  id          String   @id @default(cuid())
+  groupId     String
+  player1Id   String
+  player2Id   String
+  gameType    String   // "501", "301", "Cricket", etc.
+  player1Score Int?
+  player2Score Int?
+  winnerId    String?
+  status      String   @default("scheduled") // "scheduled", "in_progress", "completed"
+  scheduledAt DateTime @default(now())
+  completedAt DateTime?
+
+  // Relations
+  group       Group     @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  player1     User      @relation("Player1", fields: [player1Id], references: [id])
+  player2     User      @relation("Player2", fields: [player2Id], references: [id])
+  scores      MatchScore[]
+}
+
+// Individual scores in a match
+model MatchScore {
+  id        String   @id @default(cuid())
+  matchId   String
+  userId    String
+  round     Int
+  score     Int
+  darts     Int      // Number of darts thrown
+  createdAt DateTime @default(now())
+
+  // Relations
+  match     Match    @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// Training exercises
+model Training {
+  id          String   @id @default(cuid())
+  name        String
+  description String
+  gameType    String
+  target      String
+  difficulty  String   // "beginner", "intermediate", "advanced"
+  order       Int      @default(0)
+  createdAt   DateTime @default(now())
+
+  // Relations
+  progress    TrainingProgress[]
+}
+
+// User training progress
+model TrainingProgress {
+  id          String   @id @default(cuid())
+  userId      String
+  trainingId  String
+  completed   Boolean  @default(false)
+  bestScore   Int?
+  attempts    Int      @default(0)
+  lastAttempt DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  training    Training  @relation(fields: [trainingId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, trainingId])
+}
