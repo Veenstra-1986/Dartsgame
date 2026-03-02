@@ -1,9 +1,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Target, RotateCcw, Check, Eraser, Trophy, Play, Edit2, ChevronDown, ChevronUp, Minus2, Plus, X } from 'lucide-react';
+import { Target, RotateCcw, Check, Eraser, Trophy, Play, Edit2, ChevronDown, ChevronUp, X, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { DartsKeypad } from '@/components/darts-keypad';
@@ -112,7 +112,7 @@ export default function ScoreboardPage() {
       }
     }
 
-    return [...new Set(outs)].slice(0, 8);
+    return [...new Set(outs)].slice(0, 6);
   };
 
   // Reset game when game type changes
@@ -390,11 +390,10 @@ export default function ScoreboardPage() {
                 <h1 className="text-sm font-bold text-slate-900 dark:text-white leading-tight truncate">
                   {preferences.groupName || 'DartsPro'}
                 </h1>
-                <Badge variant="secondary" className="text-[9px] px-1 py-0" style={{ backgroundColor: getAccentColorClassWithOpacity(accentColor), color: getAccentTextColor(accentColor) }}>
-                  {gameType}
-                </Badge>
               </div>
             </Link>
+            
+            {/* Game Type & Input Method Together */}
             <div className="flex items-center gap-2">
               <Select value={gameType} onValueChange={(v) => setGameType(v as GameType)}>
                 <SelectTrigger className="w-20 h-7 text-[10px]">
@@ -404,6 +403,16 @@ export default function ScoreboardPage() {
                   <SelectItem value="501">501</SelectItem>
                   <SelectItem value="301">301</SelectItem>
                   <SelectItem value="Cricket">Cricket</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select value={inputMethod} onValueChange={(v) => setInputMethod(v as InputMethod)}>
+                <SelectTrigger className="w-20 h-7 text-[10px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="per-dart">Per Dart</SelectItem>
+                  <SelectItem value="3-darts">3 Darts</SelectItem>
+                  <SelectItem value="direct">Direct</SelectItem>
                 </SelectContent>
               </Select>
               <Button
@@ -472,7 +481,7 @@ export default function ScoreboardPage() {
                   <CardContent className="px-2 pb-2">
                     <CardTitle
                       className={`font-bold leading-none text-center ${
-                        isCurrentPlayer ? 'text-4xl' : 'text-2xl'
+                        isCurrentPlayer ? 'text-5xl' : 'text-2xl'
                       } ${
                         isCurrentPlayer
                           ? getAccentTextColor(accentColor)
@@ -499,106 +508,43 @@ export default function ScoreboardPage() {
           </div>
         </div>
 
-        {/* Current Player Info - Compact */}
-        {!gameFinished && (
-          <div className="flex-shrink-0 px-2 pb-2">
-            <Card className="border-2" style={{ borderColor: getAccentColorClass(accentColor) }}>
-              <CardContent className="p-2">
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-2">
-                    <div className="w-5 h-5 rounded flex items-center justify-center" style={{ backgroundColor: getAccentColorClass(accentColor) }}>
-                      <Play className="h-2.5 w-2.5 text-white" />
-                    </div>
-                    <span className="font-bold text-xs text-slate-900 dark:text-white">{currentPlayer.name}</span>
-                  </div>
-                  {currentPlayer.currentDarts.length > 0 && (
-                    <div className="flex items-center gap-1">
-                      <span className="text-[10px] text-slate-500">Beurt:</span>
-                      <span className={`font-bold text-sm ${getAccentTextColor(accentColor)}`}>{roundTotal}</span>
-                    </div>
-                  )}
-                </div>
-                
-                {/* Current Darts Display */}
-                {currentPlayer.currentDarts.length > 0 && (
-                  <div className="flex items-center justify-between py-1.5 px-2 rounded-lg mb-2" style={{ backgroundColor: getAccentColorClassWithOpacity(accentColor, 0.15) }}>
-                    <div className="flex gap-1">
-                      {currentPlayer.currentDarts.map((score, i) => (
-                        <Badge
-                          key={i}
-                          variant="secondary"
-                          className={`text-[10px] px-1.5 py-0 bg-white dark:bg-slate-800 ${getAccentTextColor(accentColor)}`}
-                        >
-                          {score}
-                        </Badge>
-                      ))}
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <span className="text-[10px] text-slate-500">Rest:</span>
-                      <span className={`font-bold text-xs ${getAccentTextColor(accentColor)}`}>
-                        {currentPlayer.score - roundTotal}
-                      </span>
-                    </div>
-                  </div>
-                )}
-
-                {/* Message */}
-                {message && (
-                  <div className={`p-1.5 rounded text-center text-[10px] font-medium mb-2 ${
-                    message.includes('busten') || message.includes('Ongeldige')
-                      ? 'bg-red-50 text-red-700 border border-red-200 dark:bg-red-950/20 dark:text-red-400'
-                      : message.includes('wint') || message.includes('🎉')
-                      ? 'bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-950/20 dark:text-amber-400'
-                      : 'bg-slate-100 text-slate-900 dark:bg-slate-800 dark:text-white'
-                  }`}>
-                    {message}
-                  </div>
-                )}
-
-                {/* Check-out Suggestions - Compact */}
-                {checkOut.length > 0 && (
-                  <div className="flex flex-wrap gap-1 mb-2">
-                    {checkOut.map((out, i) => (
-                      <Badge
-                        key={i}
-                        variant="secondary"
-                        className="bg-amber-100 text-amber-800 border-amber-300 text-[9px] font-mono py-0.5 px-1.5 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-700"
-                      >
-                        {out}
-                      </Badge>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </div>
-        )}
-
-        {/* Collapsible Input Panel */}
+        {/* Collapsible Input Panel with Score Info */}
         {!gameFinished && (
           <div className="flex-shrink-0 px-2 flex flex-col min-h-0">
             <Card className="flex flex-col flex-1 min-h-0 border-2">
-              {/* Toggle Header */}
+              {/* Toggle Header with Current Player Info */}
               <button
                 onClick={() => setInputPanelOpen(!inputPanelOpen)}
                 className="flex items-center justify-between px-3 py-2 border-b bg-white/50 dark:bg-slate-800/50 hover:bg-white/80 dark:hover:bg-slate-800 transition-colors"
+                style={{ backgroundColor: getAccentColorClassWithOpacity(accentColor, 0.05) }}
               >
-                <div className="flex items-center gap-2">
-                  <Select value={inputMethod} onValueChange={(v) => setInputMethod(v as InputMethod)}>
-                    <SelectTrigger className="w-24 h-6 text-[10px]">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="per-dart">Per Dart</SelectItem>
-                      <SelectItem value="3-darts">3 Darts</SelectItem>
-                      <SelectItem value="direct">Direct</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <span className="text-[10px] text-slate-500">
-                    {currentPlayer.currentDarts.length > 0 && `${currentPlayer.currentDarts.length}/3 darts`}
-                  </span>
+                <div className="flex items-center gap-2 flex-1 min-w-0">
+                  <div className="w-5 h-5 rounded flex items-center justify-center flex-shrink-0" style={{ backgroundColor: getAccentColorClass(accentColor) }}>
+                    <Play className="h-2.5 w-2.5 text-white" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-xs text-slate-900 dark:text-white truncate">{currentPlayer.name}</span>
+                      {currentPlayer.currentDarts.length > 0 && (
+                        <span className={`font-bold text-xs flex-shrink-0 ${getAccentTextColor(accentColor)}`}>{roundTotal}</span>
+                      )}
+                    </div>
+                    {currentPlayer.currentDarts.length > 0 && (
+                      <div className="flex items-center gap-1">
+                        {currentPlayer.currentDarts.map((score, i) => (
+                          <Badge
+                            key={i}
+                            variant="secondary"
+                            className={`text-[9px] px-1 py-0 bg-white dark:bg-slate-800 ${getAccentTextColor(accentColor)}`}
+                          >
+                            {score}
+                          </Badge>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-shrink-0">
                   {(inputMethod === 'per-dart' || inputMethod === '3-darts') && currentPlayer.currentDarts.length > 0 && (
                     <div className="flex gap-1">
                       <Button
@@ -625,15 +571,55 @@ export default function ScoreboardPage() {
 
               {/* Expandable Content */}
               {inputPanelOpen && (
-                <CardContent className="p-2 overflow-auto">
+                <CardContent className="p-2 overflow-auto flex flex-col min-h-0">
+                  {/* Message */}
+                  {message && (
+                    <div className={`p-1.5 rounded text-center text-[10px] font-medium mb-2 ${
+                      message.includes('busten') || message.includes('Ongeldige')
+                        ? 'bg-red-50 text-red-700 border border-red-200 dark:bg-red-950/20 dark:text-red-400'
+                        : message.includes('wint') || message.includes('🎉')
+                        ? 'bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-950/20 dark:text-amber-400'
+                        : 'bg-slate-100 text-slate-900 dark:bg-slate-800 dark:text-white'
+                    }`}>
+                      {message}
+                    </div>
+                  )}
+
+                  {/* Remaining Score Display */}
+                  {currentPlayer.currentDarts.length > 0 && (
+                    <div className="flex items-center justify-center py-1.5 px-2 rounded-lg mb-2" style={{ backgroundColor: getAccentColorClassWithOpacity(accentColor, 0.15) }}>
+                      <span className="text-[10px] text-slate-500 mr-2">Rest:</span>
+                      <span className={`font-bold text-sm ${getAccentTextColor(accentColor)}`}>
+                        {currentPlayer.score - roundTotal}
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Check-out Suggestions - Compact */}
+                  {checkOut.length > 0 && (
+                    <div className="flex flex-wrap gap-1 mb-2">
+                      {checkOut.map((out, i) => (
+                        <Badge
+                          key={i}
+                          variant="secondary"
+                          className="bg-amber-100 text-amber-800 border-amber-300 text-[9px] font-mono py-0.5 px-1.5 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-700"
+                        >
+                          {out}
+                        </Badge>
+                      ))}
+                    </div>
+                  )}
+
                   {/* Input Method: Per Dart */}
                   {inputMethod === 'per-dart' && (
-                    <DartsKeypad
-                      onScore={handlePerDartScore}
-                      onClear={clearAllDarts}
-                      disabled={gameFinished}
-                      accentColor={accentColor}
-                    />
+                    <div className="flex-1 min-h-0">
+                      <DartsKeypad
+                        onScore={handlePerDartScore}
+                        onClear={clearAllDarts}
+                        disabled={gameFinished}
+                        accentColor={accentColor}
+                      />
+                    </div>
                   )}
 
                   {/* Input Method: 3 Darts */}
@@ -684,11 +670,13 @@ export default function ScoreboardPage() {
 
                   {/* Input Method: Direct Score */}
                   {inputMethod === 'direct' && (
-                    <NumberKeypad
-                      onScore={handleDirectScore}
-                      disabled={gameFinished}
-                      accentColor={accentColor}
-                    />
+                    <div className="flex-1 min-h-0">
+                      <NumberKeypad
+                        onScore={handleDirectScore}
+                        disabled={gameFinished}
+                        accentColor={accentColor}
+                      />
+                    </div>
                   )}
                 </CardContent>
               )}
