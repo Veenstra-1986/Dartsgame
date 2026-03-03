@@ -87,7 +87,6 @@ model Challenge {
   gameType    String   // "501", "301", "Cricket", "Around the Clock", "High Score", etc.
   targetScore Int?
   rules       String
-  difficulty  String   @default("intermediate") // "beginner", "intermediate", "advanced"
   scheduledAt DateTime @default(now())
   expiresAt   DateTime
   createdAt   DateTime @default(now())

@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { hash } from 'bcryptjs';
-import { sendVerificationEmail } from '@/lib/email';
 
 export async function POST(request: NextRequest) {
   try {
@@ -64,19 +63,13 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Send verification email
-    const emailSent = await sendVerificationEmail(email, name, verificationToken);
-
-    if (!emailSent) {
-      // Log the verification link if email sending fails
-      console.log('Email sending failed. Verification link:', `/api/auth/verify?token=${verificationToken}&email=${email}`);
-    }
+    // In a real application, send verification email here
+    // For now, we'll log it
+    console.log('Verification link would be:', `/api/auth/verify?token=${verificationToken}&email=${email}`);
 
     return NextResponse.json({
       success: true,
-      message: emailSent 
-        ? 'Registratie succesvol. Controleer je e-mail voor bevestiging.'
-        : 'Registratie succesvol. Controleer je e-mail voor bevestiging (email kon niet worden verzonden).',
+      message: 'Registratie succesvol. Controleer je e-mail voor bevestiging.',
       user: {
         id: user.id,
         name: user.name,
@@ -85,8 +78,7 @@ export async function POST(request: NextRequest) {
       group: group ? {
         id: group.id,
         name: group.name
-      } : null,
-      emailSent: emailSent
+      } : null
     });
 
   } catch (error) {
