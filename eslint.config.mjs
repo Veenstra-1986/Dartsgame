@@ -1,12 +1,17 @@
-import nextCoreWebVitals from "eslint-config-next/core-web-vitals";
-import nextTypescript from "eslint-config-next/typescript";
 import { dirname } from "path";
 import { fileURLToPath } from "url";
+import withNextConfig from "eslint-config-next/flat-config.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-const eslintConfig = [...nextCoreWebVitals, ...nextTypescript, {
+const nextConfig = withNextConfig({
+  typescript: {},
+  react: {},
+  next: {},
+});
+
+const eslintConfig = [...nextConfig, {
   rules: {
     // TypeScript rules
     "@typescript-eslint/no-explicit-any": "off",

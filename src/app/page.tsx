@@ -132,7 +132,7 @@ export default function HomePage() {
                 <Link href="/register">Start met spelen</Link>
               </Button>
               <Button size="lg" variant="outline" className={`text-lg px-8`} style={{ color: getAccentTextColor(preferences.accentColor), borderColor: getAccentTextColor(preferences.accentColor) }}>
-                <Link href="/scoreboard">Probeer Scoreteller</Link>
+                <Link href="/scoreboard" className="text-inherit hover:text-inherit">Probeer Scoreteller</Link>
               </Button>
             </div>
           </div>
@@ -249,8 +249,8 @@ export default function HomePage() {
               <Button size="lg" className="text-lg px-8 bg-white text-slate-900 hover:bg-slate-100" asChild>
                 <Link href="/register">Maak een account</Link>
               </Button>
-              <Button size="lg" variant="outline" className="text-lg px-8 border-white text-white hover:bg-white/10 hover:text-white" asChild>
-                <Link href="/scoreboard">Probeer Scoreteller</Link>
+              <Button size="lg" variant="outline" className="text-lg px-8 border-white text-slate-900 hover:bg-white hover:text-slate-900" asChild>
+                <Link href="/scoreboard" className="text-inherit hover:text-inherit">Probeer Scoreteller</Link>
               </Button>
             </div>
           </div>

@@ -1,9 +1,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Target, RotateCcw, Check, Eraser, TrendingUp, Trophy, Play, Edit2, ChevronDown, ChevronUp, X } from 'lucide-react';
+import { Target, RotateCcw, Check, Eraser, Trophy, Play, Edit2, ChevronDown, ChevronUp, X, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { DartsKeypad } from '@/components/darts-keypad';
@@ -42,8 +42,7 @@ export default function ScoreboardPage() {
   const [currentPlayerIndex, setCurrentPlayerIndex] = useState(0);
   const [message, setMessage] = useState('');
   const [checkOut, setCheckOut] = useState<string[]>([]);
-  const [roundScore, setRoundScore] = useState('');
-  const [expandedStats, setExpandedStats] = useState<Record<string, boolean>>({});
+  const [inputPanelOpen, setInputPanelOpen] = useState(true);
   const [editNameDialog, setEditNameDialog] = useState<{ open: boolean; playerId: string | null; name: string }>({ open: false, playerId: null, name: '' });
   const [editScoreDialog, setEditScoreDialog] = useState<{ open: boolean; playerId: string | null; roundIndex: number | null; dartIndex: number | null; value: string }>({ open: false, playerId: null, roundIndex: null, dartIndex: null, value: '' });
 
@@ -113,7 +112,7 @@ export default function ScoreboardPage() {
       }
     }
 
-    return [...new Set(outs)].slice(0, 10);
+    return [...new Set(outs)].slice(0, 6);
   };
 
   // Reset game when game type changes
@@ -126,8 +125,6 @@ export default function ScoreboardPage() {
     setCurrentPlayerIndex(0);
     setMessage('');
     setCheckOut([]);
-    setRoundScore('');
-    setExpandedStats({});
   }, [gameType]);
 
   // Reset current round when input method changes
@@ -135,7 +132,6 @@ export default function ScoreboardPage() {
     const newPlayers = [...players];
     newPlayers[currentPlayerIndex].currentDarts = [];
     setPlayers(newPlayers);
-    setRoundScore('');
     setMessage('');
   }, [inputMethod, currentPlayerIndex]);
 
@@ -162,7 +158,7 @@ export default function ScoreboardPage() {
     const newTotal = player.score - (currentTotal + score);
 
     if (newTotal < 0 || (newTotal === 1 && gameType !== 'Cricket')) {
-      setMessage(`Let op: ${score} zou je busten!`);
+      setMessage(`${score} zou je busten!`);
       return;
     }
 
@@ -189,7 +185,7 @@ export default function ScoreboardPage() {
 
     if (newScore === 0) {
       player.finished = true;
-      setMessage(`🎉 ${player.name} heeft gewonnen met: ${formatDartScores(darts)}!`);
+      setMessage(`🎉 ${player.name} wint!`);
     }
 
     player.score = newScore;
@@ -216,7 +212,7 @@ export default function ScoreboardPage() {
 
     if (newScore === 0) {
       player.finished = true;
-      setMessage(`🎉 ${player.name} heeft gewonnen met: ${score}!`);
+      setMessage(`🎉 ${player.name} wint!`);
     }
 
     player.score = newScore;
@@ -245,7 +241,6 @@ export default function ScoreboardPage() {
     player.currentDarts = [];
     setPlayers(newPlayers);
     setMessage('');
-    setRoundScore('');
   };
 
   const handleScoreSubmit = () => {
@@ -262,13 +257,13 @@ export default function ScoreboardPage() {
       const newScore = player.score - roundTotal;
 
       if (newScore < 0 || (newScore === 1 && gameType !== 'Cricket')) {
-        setMessage('Geen geldige uitworp! Score onder 0 of resterend is 1.');
+        setMessage('Geen geldige uitworp!');
         return;
       }
 
       if (newScore === 0) {
         player.finished = true;
-        setMessage(`🎉 ${player.name} heeft gewonnen met: ${formatDartScores(player.currentDarts)}!`);
+        setMessage(`🎉 ${player.name} wint!`);
       }
 
       player.score = newScore;
@@ -285,7 +280,7 @@ export default function ScoreboardPage() {
   };
 
   const formatDartScores = (darts: number[]) => {
-    return darts.map((score, i) => {
+    return darts.map((score) => {
       let prefix = '';
       if (score % 3 === 0 && score / 3 <= 20 && score > 0) prefix = 'T';
       else if (score % 2 === 0 && score / 2 <= 20 && score > 0) prefix = 'D';
@@ -311,8 +306,6 @@ export default function ScoreboardPage() {
     setCurrentPlayerIndex(0);
     setMessage('');
     setCheckOut([]);
-    setRoundScore('');
-    setExpandedStats({});
   };
 
   const handleEditPlayerName = () => {
@@ -356,22 +349,18 @@ export default function ScoreboardPage() {
 
     if (player && editScoreDialog.roundIndex !== null && player.history[editScoreDialog.roundIndex]) {
       if (editScoreDialog.dartIndex !== null && editScoreDialog.dartIndex !== -1) {
-        // Edit single dart in a round
         const oldScore = player.history[editScoreDialog.roundIndex][editScoreDialog.dartIndex];
         player.history[editScoreDialog.roundIndex][editScoreDialog.dartIndex] = newScore;
         const roundDiff = newScore - oldScore;
         player.score -= roundDiff;
       } else if (editScoreDialog.dartIndex === -1) {
-        // Edit total round score
         const oldTotal = player.history[editScoreDialog.roundIndex].reduce((a, b) => a + b, 0);
         const diff = newScore - oldTotal;
         player.score -= diff;
-        // Distribute the difference across darts
         const numDarts = player.history[editScoreDialog.roundIndex].length;
         for (let i = 0; i < numDarts; i++) {
           player.history[editScoreDialog.roundIndex][i] = Math.floor(newScore / numDarts);
         }
-        // Add remainder to first dart
         player.history[editScoreDialog.roundIndex][0] += newScore % numDarts;
       }
       setPlayers(newPlayers);
@@ -383,414 +372,317 @@ export default function ScoreboardPage() {
     setEditScoreDialog({ open: false, playerId: null, roundIndex: null, dartIndex: null, value: '' });
   };
 
-  const getPlayerStats = (player: Player) => {
-    const highest = player.history.length > 0
-      ? Math.max(...player.history.map(h => h.reduce((a, b) => a + b, 0)))
-      : 0;
-    const average = player.history.length > 0 && player.darts > 0
-      ? Math.round(
-          player.history.reduce((a, b) => a + b.reduce((x, y) => x + y, 0), 0) /
-          player.darts * 3
-        )
-      : 0;
-    const rounds = player.history.length;
-
-    return { highest, average, rounds };
-  };
-
   const currentPlayer = players[currentPlayerIndex];
   const gameFinished = players.some(p => p.finished);
+  const roundTotal = currentPlayer.currentDarts.reduce((a, b) => a + b, 0);
 
   return (
-    <div className="min-h-screen flex flex-col bg-gradient-to-b from-slate-50 to-slate-100 dark:from-slate-950 dark:to-slate-900">
-      {/* Header */}
-      <header className="sticky top-0 z-50 w-full border-b bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm">
-        <div className="container mx-auto px-4 py-3">
+    <div className="h-screen flex flex-col bg-gradient-to-b from-slate-50 to-slate-100 dark:from-slate-950 dark:to-slate-900 overflow-hidden">
+      {/* Header - Ultra Compact */}
+      <header className="flex-shrink-0 border-b bg-white/90 dark:bg-slate-900/90 backdrop-blur-sm">
+        <div className="px-3 py-2">
           <div className="flex items-center justify-between">
             <Link href="/" className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-full flex items-center justify-center" style={{ backgroundColor: getAccentColorClass(accentColor) }}>
-                <Target className="h-4 w-4 text-white" />
+              <div className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0" style={{ backgroundColor: getAccentColorClass(accentColor) }}>
+                <Target className="h-3.5 w-3.5 text-white" />
               </div>
-              <div>
-                <h1 className="text-lg font-bold text-slate-900 dark:text-white leading-tight">
+              <div className="min-w-0">
+                <h1 className="text-sm font-bold text-slate-900 dark:text-white leading-tight truncate">
                   {preferences.groupName || 'DartsPro'}
                 </h1>
-                <Badge variant="secondary" className="text-[10px] px-1 py-0" style={{ backgroundColor: getAccentColorClassWithOpacity(accentColor), color: getAccentTextColor(accentColor) }}>
-                  <Trophy className="h-2.5 w-2.5 mr-0.5" />
-                  {gameType}
-                </Badge>
               </div>
             </Link>
-            <Badge className="text-white text-xs" style={{ backgroundColor: getAccentColorClass(accentColor) }}>
-              Scoreteller
-            </Badge>
+            
+            {/* Game Type & Input Method Together */}
+            <div className="flex items-center gap-2">
+              <Select value={gameType} onValueChange={(v) => setGameType(v as GameType)}>
+                <SelectTrigger className="w-20 h-7 text-[10px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="501">501</SelectItem>
+                  <SelectItem value="301">301</SelectItem>
+                  <SelectItem value="Cricket">Cricket</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select value={inputMethod} onValueChange={(v) => setInputMethod(v as InputMethod)}>
+                <SelectTrigger className="w-20 h-7 text-[10px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="per-dart">Per Dart</SelectItem>
+                  <SelectItem value="3-darts">3 Darts</SelectItem>
+                  <SelectItem value="direct">Direct</SelectItem>
+                </SelectContent>
+              </Select>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={resetGame}
+                className="h-7 px-2 text-[10px]"
+              >
+                <RotateCcw className="h-3 w-3 mr-1" />
+              </Button>
+            </div>
           </div>
         </div>
       </header>
 
-      <main className="flex-1 container mx-auto px-3 py-3 pb-20">
-        <div className="max-w-4xl mx-auto space-y-3">
-          {/* Game Settings - Compact */}
-          <Card className="border-l-4" style={{ borderLeftColor: getAccentColorClass(accentColor) }}>
-            <CardContent className="p-3">
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <div className="flex items-center gap-3">
-                  <Select value={gameType} onValueChange={(v) => setGameType(v as GameType)}>
-                    <SelectTrigger className="w-28 h-8 text-xs">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="501">501</SelectItem>
-                      <SelectItem value="301">301</SelectItem>
-                      <SelectItem value="Cricket">Cricket</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <Select value={inputMethod} onValueChange={(v) => setInputMethod(v as InputMethod)}>
-                    <SelectTrigger className="w-32 h-8 text-xs">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="per-dart">Per Dart</SelectItem>
-                      <SelectItem value="3-darts">3 Darts</SelectItem>
-                      <SelectItem value="direct">Direct</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={resetGame}
-                  className="h-8 px-3 text-xs"
-                >
-                  <RotateCcw className="h-3 w-3 mr-1" />
-                  Nieuw Spel
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Compact Scoreboard - Side by Side */}
+      {/* Main Content */}
+      <main className="flex-1 overflow-hidden flex flex-col min-h-0">
+        {/* Score Cards - Side by Side, Compact */}
+        <div className="flex-shrink-0 px-2 py-2">
           <div className="grid grid-cols-2 gap-2">
             {players.map((player, index) => {
               const isCurrentPlayer = index === currentPlayerIndex && !gameFinished;
-              const stats = getPlayerStats(player);
-              const isExpanded = expandedStats[player.id];
-
+              
               return (
                 <Card
                   key={player.id}
                   className={`relative transition-all ${
                     isCurrentPlayer
-                      ? 'border-3 shadow-xl scale-105 z-10'
+                      ? 'border-2 shadow-lg'
                       : player.finished
-                      ? 'border-2 border-amber-400 bg-amber-50/50 dark:bg-amber-950/20'
+                      ? 'border-amber-400 bg-amber-50/50 dark:bg-amber-950/20'
                       : 'border border-slate-200 dark:border-slate-800'
                   }`}
                   style={{
                     borderColor: isCurrentPlayer ? getAccentColorClass(accentColor) : undefined,
-                    minHeight: isCurrentPlayer ? 'auto' : undefined
                   }}
                 >
-                  {/* Player Header with Edit Name */}
-                  <CardHeader className={`pb-2 px-3 ${isCurrentPlayer ? 'pt-4' : 'pt-3'}`}>
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <p className={`font-bold truncate ${isCurrentPlayer ? 'text-base' : 'text-sm'}`}>
-                            {player.name}
-                          </p>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-5 w-5 p-0 flex-shrink-0"
-                            onClick={() => setEditNameDialog({ open: true, playerId: player.id, name: player.name })}
-                          >
-                            <Edit2 className="h-3 w-3" />
-                          </Button>
-                        </div>
-                      </div>
-                      <div className="flex flex-col items-end gap-1 flex-shrink-0">
-                        <CardTitle
-                          className={`font-bold ${isCurrentPlayer ? 'text-5xl' : 'text-3xl'} leading-none ${
-                            isCurrentPlayer
-                              ? getAccentTextColor(accentColor)
-                              : 'text-slate-900 dark:text-white'
-                          }`}
+                  <CardHeader className="pb-1 px-2 pt-2">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                        <p className={`font-bold truncate ${isCurrentPlayer ? 'text-sm' : 'text-xs'}`}>
+                          {player.name}
+                        </p>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-4 w-4 p-0 flex-shrink-0"
+                          onClick={() => setEditNameDialog({ open: true, playerId: player.id, name: player.name })}
                         >
-                          {player.score}
-                        </CardTitle>
-                        {isCurrentPlayer && (
-                          <Badge className="animate-pulse text-white text-[10px]" style={{ backgroundColor: getAccentColorClass(accentColor) }}>
-                            <Play className="h-2 w-2 mr-1" />
-                            Aan beurt
-                          </Badge>
-                        )}
-                        {player.finished && (
-                          <Badge className="bg-amber-500 text-white text-[10px]">
-                            <Trophy className="h-2 w-2 mr-1" />
-                            Gewonnen
-                          </Badge>
-                        )}
+                          <Edit2 className="h-2.5 w-2.5" />
+                        </Button>
                       </div>
-                    </div>
-                  </CardHeader>
-
-                  <CardContent className="space-y-2 px-3 pb-3">
-                    {/* Expandable Stats */}
-                    <div className="border rounded-lg overflow-hidden">
-                      <button
-                        onClick={() => setExpandedStats(prev => ({ ...prev, [player.id]: !prev[player.id] }))}
-                        className="w-full p-2 flex items-center justify-between text-xs hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
-                      >
-                        <span className="text-slate-600 dark:text-slate-400 font-medium">Statistieken</span>
-                        {isExpanded ? <ChevronUp className="h-3 w-3 text-slate-400" /> : <ChevronDown className="h-3 w-3 text-slate-400" />}
-                      </button>
-                      {isExpanded && (
-                        <div className="grid grid-cols-3 gap-2 text-center py-2 px-2 bg-slate-50 dark:bg-slate-800/50 border-t">
-                          <div>
-                            <span className="text-[10px] text-slate-500 dark:text-slate-400 block">Darts</span>
-                            <span className="font-bold text-sm text-slate-900 dark:text-white">{player.darts}</span>
-                          </div>
-                          <div>
-                            <span className="text-[10px] text-slate-500 dark:text-slate-400 block">Hoogste</span>
-                            <span className="font-bold text-sm text-slate-900 dark:text-white">{stats.highest}</span>
-                          </div>
-                          <div>
-                            <span className="text-[10px] text-slate-500 dark:text-slate-400 block">Gem/3</span>
-                            <span className="font-bold text-sm text-slate-900 dark:text-white">{stats.average}</span>
-                          </div>
-                        </div>
+                      {isCurrentPlayer && (
+                        <Badge className="animate-pulse text-white text-[9px] px-1.5 py-0.5" style={{ backgroundColor: getAccentColorClass(accentColor) }}>
+                          Aan beurt
+                        </Badge>
+                      )}
+                      {player.finished && (
+                        <Badge className="bg-amber-500 text-white text-[9px] px-1.5 py-0.5">
+                          <Trophy className="h-2 w-2 mr-0.5" />
+                          Winst
+                        </Badge>
                       )}
                     </div>
-
-                    {/* Current Turn - Active Player Only */}
-                    {isCurrentPlayer && player.currentDarts.length > 0 && (
-                      <div className="py-2 px-3 rounded-lg" style={{ backgroundColor: getAccentColorClassWithOpacity(accentColor, 0.15) }}>
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs font-medium" style={{ color: getAccentTextColor(accentColor) }}>
-                            Huidige beurt
-                          </span>
-                          <span className={`font-bold ${isCurrentPlayer ? 'text-xl' : 'text-lg'}`} style={{ color: getAccentTextColor(accentColor) }}>
-                            {player.currentDarts.reduce((a, b) => a + b, 0)}
-                          </span>
-                        </div>
-                        <div className="flex gap-1 mt-2">
-                          {player.currentDarts.map((score, i) => (
-                            <Badge
-                              key={i}
-                              variant="secondary"
-                              className={`text-xs px-2 py-0.5 bg-white dark:bg-slate-800 ${getAccentTextColor(accentColor)}`}
-                            >
-                              {score}
-                            </Badge>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Recent Throws - Collapsible */}
-                    {player.history.length > 0 && (
-                      <div className="border rounded-lg overflow-hidden">
-                        <button
-                          onClick={() => setExpandedStats(prev => ({ ...prev, [`${player.id}-history`]: !prev[`${player.id}-history`] }))}
-                          className="w-full p-2 flex items-center justify-between text-xs hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
-                        >
-                          <span className="text-slate-600 dark:text-slate-400 font-medium">Laatste worpen ({player.history.length})</span>
-                          {expandedStats[`${player.id}-history`] ? <ChevronUp className="h-3 w-3 text-slate-400" /> : <ChevronDown className="h-3 w-3 text-slate-400" />}
-                        </button>
-                        {expandedStats[`${player.id}-history`] && (
-                          <div className="max-h-32 overflow-y-auto p-2 space-y-1 bg-slate-50 dark:bg-slate-800/50 border-t">
-                            {player.history.slice(-10).reverse().map((round, i) => {
-                              const roundIndex = player.history.length - 1 - i;
-                              const roundTotal = round.reduce((a, b) => a + b, 0);
-                              return (
-                                <div key={i} className="flex items-center justify-between py-1 px-2 border-b border-slate-100 dark:border-slate-700 last:border-0 hover:bg-white dark:hover:bg-slate-800 rounded transition-colors">
-                                  <span className="text-xs text-slate-600 dark:text-slate-400">{formatDartScores(round)}</span>
-                                  <div className="flex items-center gap-2">
-                                    <span className={`font-bold ${isCurrentPlayer ? getAccentTextColor(accentColor) : 'text-slate-900 dark:text-white'}`}>
-                                      {roundTotal}
-                                    </span>
-                                    <Button
-                                      variant="ghost"
-                                      size="sm"
-                                      className="h-5 w-5 p-0 flex-shrink-0"
-                                      onClick={() => setEditScoreDialog({ open: true, playerId: player.id, roundIndex, dartIndex: null, value: roundTotal.toString() })}
-                                    >
-                                      <Edit2 className="h-3 w-3" />
-                                    </Button>
-                                  </div>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        )}
-                      </div>
-                    )}
+                  </CardHeader>
+                  <CardContent className="px-2 pb-2">
+                    <CardTitle
+                      className={`font-bold leading-none text-center ${
+                        isCurrentPlayer ? 'text-5xl' : 'text-2xl'
+                      } ${
+                        isCurrentPlayer
+                          ? getAccentTextColor(accentColor)
+                          : 'text-slate-900 dark:text-white'
+                      }`}
+                    >
+                      {player.score}
+                    </CardTitle>
+                    <div className="flex justify-between items-center mt-1.5 text-[10px] text-slate-500 dark:text-slate-400">
+                      <span>Darts: {player.darts}</span>
+                      <span>
+                        Avg: {player.darts > 0 
+                          ? Math.round(
+                              player.history.reduce((a, b) => a + b.reduce((x, y) => x + y, 0), 0) /
+                              player.darts * 3
+                            )
+                          : 0}
+                      </span>
+                    </div>
                   </CardContent>
                 </Card>
               );
             })}
           </div>
+        </div>
 
-          {/* Score Input Section */}
-          {!gameFinished && (
-            <Card className="border-2">
-              <CardHeader className="pb-3 px-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle className="text-base flex items-center gap-2">
-                      <div className="w-6 h-6 rounded flex items-center justify-center" style={{ backgroundColor: getAccentColorClass(accentColor) }}>
-                        <Target className="h-3 w-3 text-white" />
-                      </div>
-                      <span>{currentPlayer.name}</span>
-                    </CardTitle>
-                    <CardDescription className="text-xs mt-1">
-                      Type: {inputMethod === 'per-dart' ? 'Per Dart' : inputMethod === '3-darts' ? '3 Darts + Bevestig' : 'Directe Score'}
-                    </CardDescription>
+        {/* Collapsible Input Panel with Score Info */}
+        {!gameFinished && (
+          <div className="flex-shrink-0 px-2 flex flex-col min-h-0">
+            <Card className="flex flex-col flex-1 min-h-0 border-2">
+              {/* Toggle Header with Current Player Info */}
+              <button
+                onClick={() => setInputPanelOpen(!inputPanelOpen)}
+                className="flex items-center justify-between px-3 py-2 border-b bg-white/50 dark:bg-slate-800/50 hover:bg-white/80 dark:hover:bg-slate-800 transition-colors"
+                style={{ backgroundColor: getAccentColorClassWithOpacity(accentColor, 0.05) }}
+              >
+                <div className="flex items-center gap-2 flex-1 min-w-0">
+                  <div className="w-5 h-5 rounded flex items-center justify-center flex-shrink-0" style={{ backgroundColor: getAccentColorClass(accentColor) }}>
+                    <Play className="h-2.5 w-2.5 text-white" />
                   </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-xs text-slate-900 dark:text-white truncate">{currentPlayer.name}</span>
+                      {currentPlayer.currentDarts.length > 0 && (
+                        <span className={`font-bold text-xs flex-shrink-0 ${getAccentTextColor(accentColor)}`}>{roundTotal}</span>
+                      )}
+                    </div>
+                    {currentPlayer.currentDarts.length > 0 && (
+                      <div className="flex items-center gap-1">
+                        {currentPlayer.currentDarts.map((score, i) => (
+                          <Badge
+                            key={i}
+                            variant="secondary"
+                            className={`text-[9px] px-1 py-0 bg-white dark:bg-slate-800 ${getAccentTextColor(accentColor)}`}
+                          >
+                            {score}
+                          </Badge>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 flex-shrink-0">
                   {(inputMethod === 'per-dart' || inputMethod === '3-darts') && currentPlayer.currentDarts.length > 0 && (
                     <div className="flex gap-1">
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={clearCurrentDart}
-                        className="h-8 px-2 text-xs"
+                        onClick={(e) => { e.stopPropagation(); clearCurrentDart(); }}
+                        className="h-5 w-5 p-0 text-[10px]"
                       >
-                        <Eraser className="h-3 w-3 mr-1" />
-                        Terug
+                        <Eraser className="h-2.5 w-2.5" />
                       </Button>
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={clearAllDarts}
-                        className="h-8 px-2 text-xs"
+                        onClick={(e) => { e.stopPropagation(); clearAllDarts(); }}
+                        className="h-5 w-5 p-0 text-[10px]"
                       >
-                        Wissen
+                        <X className="h-2.5 w-2.5" />
                       </Button>
                     </div>
                   )}
+                  {inputPanelOpen ? <ChevronUp className="h-4 w-4 text-slate-400" /> : <ChevronDown className="h-4 w-4 text-slate-400" />}
                 </div>
-              </CardHeader>
-              <CardContent className="space-y-3 px-4">
-                {message && (
-                  <div className={`p-3 rounded-lg text-center text-sm font-medium ${
-                    message.includes('busten') || message.includes('Ongeldige') || message.includes('fout')
-                      ? 'bg-red-50 text-red-700 border border-red-200 dark:bg-red-950/20 dark:text-red-400 dark:border-red-900'
-                      : message.includes('gewonnen') || message.includes('🎉')
-                      ? 'bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-950/20 dark:text-amber-400 dark:border-amber-900'
-                      : 'bg-slate-100 text-slate-900 dark:bg-slate-800 dark:text-white'
-                  }`}>
-                    {message}
-                  </div>
-                )}
+              </button>
 
-                {/* Current Round Info */}
-                {currentPlayer.currentDarts.length > 0 && (
-                  <div className="p-3 rounded-lg border-2" style={{
-                    backgroundColor: getAccentColorClassWithOpacity(accentColor, 0.1),
-                    borderColor: getAccentColorClass(accentColor)
-                  }}>
-                    <div className="flex justify-between items-center text-sm">
-                      <span className="font-medium" style={{ color: getAccentTextColor(accentColor) }}>
-                        Beurt: <strong>{formatDartScores(currentPlayer.currentDarts)}</strong>
-                      </span>
-                      <span className={`font-medium ${getAccentTextColor(accentColor)}`}>
-                        Rest: <strong>{currentPlayer.score - currentPlayer.currentDarts.reduce((a, b) => a + b, 0)}</strong>
+              {/* Expandable Content */}
+              {inputPanelOpen && (
+                <CardContent className="p-2 overflow-auto flex flex-col min-h-0">
+                  {/* Message */}
+                  {message && (
+                    <div className={`p-1.5 rounded text-center text-[10px] font-medium mb-2 ${
+                      message.includes('busten') || message.includes('Ongeldige')
+                        ? 'bg-red-50 text-red-700 border border-red-200 dark:bg-red-950/20 dark:text-red-400'
+                        : message.includes('wint') || message.includes('🎉')
+                        ? 'bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-950/20 dark:text-amber-400'
+                        : 'bg-slate-100 text-slate-900 dark:bg-slate-800 dark:text-white'
+                    }`}>
+                      {message}
+                    </div>
+                  )}
+
+                  {/* Remaining Score Display */}
+                  {currentPlayer.currentDarts.length > 0 && (
+                    <div className="flex items-center justify-center py-1.5 px-2 rounded-lg mb-2" style={{ backgroundColor: getAccentColorClassWithOpacity(accentColor, 0.15) }}>
+                      <span className="text-[10px] text-slate-500 mr-2">Rest:</span>
+                      <span className={`font-bold text-sm ${getAccentTextColor(accentColor)}`}>
+                        {currentPlayer.score - roundTotal}
                       </span>
                     </div>
-                  </div>
-                )}
+                  )}
 
-                {/* Input Method: Per Dart */}
-                {inputMethod === 'per-dart' && (
-                  <DartsKeypad
-                    onScore={handlePerDartScore}
-                    onClear={clearAllDarts}
-                    disabled={gameFinished}
-                    accentColor={accentColor}
-                  />
-                )}
-
-                {/* Input Method: 3 Darts + Confirm */}
-                {inputMethod === '3-darts' && (
-                  <div className="space-y-3">
-                    <div className="grid grid-cols-3 gap-2">
-                      {[0, 1, 2].map((i) => (
-                        <div key={i} className="relative">
-                          <label className="text-[10px] text-slate-500 dark:text-slate-400 absolute -top-1.5 left-2 bg-white dark:bg-slate-900 px-1">
-                            Dart {i + 1}
-                          </label>
-                          <input
-                            type="number"
-                            value={currentPlayer.currentDarts[i] || ''}
-                            onChange={(e) => {
-                              const val = parseInt(e.target.value) || 0;
-                              if (val >= 0 && val <= 180) {
-                                const newPlayers = [...players];
-                                const currentDarts = [...newPlayers[currentPlayerIndex].currentDarts];
-                                currentDarts[i] = val;
-                                newPlayers[currentPlayerIndex].currentDarts = currentDarts;
-                                setPlayers(newPlayers);
-                                setMessage('');
-                              }
-                            }}
-                            placeholder="0"
-                            className="w-full text-center text-xl font-bold p-3 pt-5 border-2 rounded-lg focus:outline-none focus:ring-2 transition-all dark:bg-slate-800 dark:border-slate-700 dark:text-white"
-                            style={{
-                              borderColor: currentPlayer.currentDarts[i] ? getAccentColorClass(accentColor) : 'rgb(226, 232, 240)',
-                              focusRingColor: getAccentColorClass(accentColor)
-                            }}
-                            disabled={gameFinished}
-                          />
-                        </div>
-                      ))}
-                    </div>
-                    <Button
-                      onClick={handleScoreSubmit}
-                      size="lg"
-                      className="w-full text-white font-semibold h-12 transition-all hover:scale-[1.02]"
-                      style={{ backgroundColor: getAccentColorClass(accentColor) }}
-                      disabled={gameFinished || currentPlayer.currentDarts.length === 0}
-                    >
-                      <Check className="h-5 w-5 mr-2" />
-                      Bevestig Beurt ({currentPlayer.currentDarts.length}/3)
-                    </Button>
-                  </div>
-                )}
-
-                {/* Input Method: Direct Score */}
-                {inputMethod === 'direct' && (
-                  <NumberKeypad
-                    onScore={handleDirectScore}
-                    disabled={gameFinished}
-                    accentColor={accentColor}
-                  />
-                )}
-
-                {/* Check-out Suggestions */}
-                {checkOut.length > 0 && (
-                  <div className="p-3 rounded-lg border-2 bg-amber-50 border-amber-300 dark:bg-amber-950/20 dark:border-amber-800">
-                    <p className="text-sm font-semibold text-amber-900 dark:text-amber-200 mb-2 flex items-center gap-2">
-                      <Target className="h-4 w-4" />
-                      Check-out ({currentPlayer.score}):
-                    </p>
-                    <div className="flex flex-wrap gap-1.5">
+                  {/* Check-out Suggestions - Compact */}
+                  {checkOut.length > 0 && (
+                    <div className="flex flex-wrap gap-1 mb-2">
                       {checkOut.map((out, i) => (
                         <Badge
                           key={i}
                           variant="secondary"
-                          className="bg-amber-100 text-amber-800 border-amber-300 text-xs font-mono py-1 px-2 hover:bg-amber-200 cursor-pointer transition-colors dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-700"
+                          className="bg-amber-100 text-amber-800 border-amber-300 text-[9px] font-mono py-0.5 px-1.5 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-700"
                         >
                           {out}
                         </Badge>
                       ))}
                     </div>
-                  </div>
-                )}
-              </CardContent>
+                  )}
+
+                  {/* Input Method: Per Dart */}
+                  {inputMethod === 'per-dart' && (
+                    <div className="flex-1 min-h-0">
+                      <DartsKeypad
+                        onScore={handlePerDartScore}
+                        onClear={clearAllDarts}
+                        disabled={gameFinished}
+                        accentColor={accentColor}
+                      />
+                    </div>
+                  )}
+
+                  {/* Input Method: 3 Darts */}
+                  {inputMethod === '3-darts' && (
+                    <div className="space-y-2">
+                      <div className="grid grid-cols-3 gap-1.5">
+                        {[0, 1, 2].map((i) => (
+                          <div key={i} className="relative">
+                            <label className="text-[9px] text-slate-500 absolute -top-1 left-2 bg-white dark:bg-slate-900 px-0.5">
+                              Dart {i + 1}
+                            </label>
+                            <input
+                              type="number"
+                              value={currentPlayer.currentDarts[i] || ''}
+                              onChange={(e) => {
+                                const val = parseInt(e.target.value) || 0;
+                                if (val >= 0 && val <= 180) {
+                                  const newPlayers = [...players];
+                                  const currentDarts = [...newPlayers[currentPlayerIndex].currentDarts];
+                                  currentDarts[i] = val;
+                                  newPlayers[currentPlayerIndex].currentDarts = currentDarts;
+                                  setPlayers(newPlayers);
+                                  setMessage('');
+                                }
+                              }}
+                              placeholder="0"
+                              className="w-full text-center text-xl font-bold p-2 pt-4 border-2 rounded-lg focus:outline-none focus:ring-2 transition-all dark:bg-slate-800 dark:border-slate-700 dark:text-white text-sm"
+                              style={{
+                                borderColor: currentPlayer.currentDarts[i] ? getAccentColorClass(accentColor) : 'rgb(226, 232, 240)',
+                              }}
+                              disabled={gameFinished}
+                            />
+                          </div>
+                        ))}
+                      </div>
+                      <Button
+                        onClick={handleScoreSubmit}
+                        size="lg"
+                        className="w-full text-white font-semibold h-10 transition-all"
+                        style={{ backgroundColor: getAccentColorClass(accentColor) }}
+                        disabled={gameFinished || currentPlayer.currentDarts.length === 0}
+                      >
+                        <Check className="h-4 w-4 mr-1" />
+                        Bevestig ({currentPlayer.currentDarts.length}/3)
+                      </Button>
+                    </div>
+                  )}
+
+                  {/* Input Method: Direct Score */}
+                  {inputMethod === 'direct' && (
+                    <div className="flex-1 min-h-0">
+                      <NumberKeypad
+                        onScore={handleDirectScore}
+                        disabled={gameFinished}
+                        accentColor={accentColor}
+                      />
+                    </div>
+                  )}
+                </CardContent>
+              )}
             </Card>
-          )}
-        </div>
+          </div>
+        )}
       </main>
 
       {/* Edit Name Dialog */}
@@ -821,45 +713,6 @@ export default function ScoreboardPage() {
               </Button>
               <Button
                 onClick={handleEditPlayerName}
-                className="flex-1"
-                style={{ backgroundColor: getAccentColorClass(accentColor) }}
-              >
-                Opslaan
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Edit Score Dialog */}
-      <Dialog open={editScoreDialog.open} onOpenChange={(open) => setEditScoreDialog({ open, playerId: null, roundIndex: null, dartIndex: null, value: '' })}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Score aanpassen</DialogTitle>
-            <DialogDescription>Voer de nieuwe score in</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div>
-              <Label htmlFor="edit-score">Nieuwe score</Label>
-              <Input
-                id="edit-score"
-                type="number"
-                value={editScoreDialog.value}
-                onChange={(e) => setEditScoreDialog({ ...editScoreDialog, value: e.target.value })}
-                placeholder="0-180"
-                onKeyDown={(e) => e.key === 'Enter' && handleEditScore()}
-              />
-            </div>
-            <div className="flex gap-3">
-              <Button
-                variant="outline"
-                onClick={() => setEditScoreDialog({ open: false, playerId: null, roundIndex: null, dartIndex: null, value: '' })}
-                className="flex-1"
-              >
-                Annuleren
-              </Button>
-              <Button
-                onClick={handleEditScore}
                 className="flex-1"
                 style={{ backgroundColor: getAccentColorClass(accentColor) }}
               >
